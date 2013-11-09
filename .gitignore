@@ -35,3 +35,6 @@ test/total_coverage
 .mr.developer.cfg
 .project
 .pydevproject
+
+# Temporary files
+.*.swp
