@@ -1,6 +1,6 @@
 from textwrap import wrap
 
-from .base import ABCUIElement
+from .base import ABCUIElement, ABCContainerElement
 from .util import fixed_length_list, VAlign, HAlign
 
 
@@ -41,3 +41,31 @@ class Text(Fill):
             elif self.halign is HAlign.right:
                 lines[i] = line.rjust(width, self.fillchar)
         return lines
+
+
+class Stack(ABCContainerElement):
+    max_width = None
+    max_height = None
+
+    def __init__(self, elements, valign=VAlign.bottom):
+        super().__init__(elements)
+        self.valign = valign
+
+    @property
+    def min_width(self):
+        try:
+            return max(
+                element.min_width for element in self if element.min_width)
+        except ValueError:
+            return
+
+    @property
+    def min_height(self):
+        return sum(element.min_height or 1 for element in self)
+
+    def draw(self, width, height):
+        lines = []
+        for element in self:
+            lines.extend(element.draw(width, element.min_height or 1))
+        return fixed_length_list(
+            lines, height, default=' ' * width, valign=self.valign)
