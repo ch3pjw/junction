@@ -1,0 +1,3 @@
+#! /bin/bash
+
+exec $(git rev-parse --show-toplevel)/run_tests_with_coverage.py
