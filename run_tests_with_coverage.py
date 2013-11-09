@@ -16,7 +16,8 @@ nose.run(defaultTest=os.path.join(this_dir, 'test'))
 c.stop()
 
 analysis = []
-for cur_dir, sub_dir, file_names in os.walk(os.path.join(this_dir, 'pyamp')):
+for cur_dir, sub_dir, file_names in os.walk(
+        os.path.join(this_dir, 'junction')):
     for file_name in file_names:
         file_name = os.path.join(cur_dir, file_name)
         if file_name.endswith('.py'):
