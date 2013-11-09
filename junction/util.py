@@ -59,4 +59,8 @@ def fixed_length_list(l, length, default='', valign=VAlign.top):
         elif valign is VAlign.middle:
             result[0:0] = [default] * (missing // 2)
             result.extend([default] * ((missing + 1) // 2))
+        else:
+            # More helpful than not, or wrongly, padding the list:
+            raise ValueError(
+                'Unrecognised vertical alignment {!r}'.format(valign))
     return result

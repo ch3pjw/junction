@@ -1,6 +1,7 @@
 from unittest import TestCase
 
-from junction.elements import Fill, Text, VAlign, HAlign
+from junction.elements import Fill, Text
+from junction.util import VAlign, HAlign
 
 
 class TestElements(TestCase):

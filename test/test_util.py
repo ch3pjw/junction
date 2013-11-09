@@ -27,3 +27,5 @@ class TestUtil(TestCase):
         self.assertEqual(
             fixed_length_list([3], 4, valign=VAlign.middle),
             ['', 3, '', ''])
+        self.assertRaises(
+            ValueError, fixed_length_list, [0], 10, valign='wrong')
