@@ -1,10 +1,23 @@
 from unittest import TestCase
 
-from junction.util import VAlign, HAlign
+from junction.base import VAlign, HAlign
 from junction.elements import Fill, Text, Stack
 
 
 class TestElements(TestCase):
+    def test_set_get_alignment(self):
+        fill = Fill()
+        fill.valign = VAlign.middle
+        self.assertEqual(fill.valign, VAlign.middle)
+        def bad():
+            fill.valign = 'wrong'
+        self.assertRaises(ValueError, bad)
+        fill.halign = HAlign.center
+        self.assertEqual(fill.halign, HAlign.center)
+        def bad():
+            fill.halign = 'wrong'
+        self.assertRaises(ValueError, bad)
+
     def test_fill(self):
         fill = Fill()
         self.assertEqual(fill.draw(10, 0), [])
@@ -67,6 +80,8 @@ class TestElements(TestCase):
         self.assertIsNone(stack.min_width)
         fill2.min_width = 7
         self.assertEqual(stack.min_width, 7)
+        self.assertEqual(stack.draw(3, 2), ['222', '222'])
+        stack.valign = VAlign.top
         self.assertEqual(stack.draw(3, 2), ['111', '222'])
         self.assertEqual(stack.draw(3, 1), ['111'])
         fill3 = Fill('3')
