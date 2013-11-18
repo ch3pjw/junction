@@ -3,6 +3,7 @@ import blessings
 from io import StringIO
 
 from junction import Terminal
+from junction.terminal import get_terminal
 
 
 class TestTerminal(TestCase):
@@ -16,3 +17,9 @@ class TestTerminal(TestCase):
             test_term.stream.getvalue(),
             blessings_term.move(4, 3) + 'hello' +
             blessings_term.move(5, 3) + 'world')
+
+    def test_get_terminal(self):
+        terminal = get_terminal()
+        self.assertIsInstance(terminal, Terminal)
+        # Same terminal instance every time:
+        self.assertIs(get_terminal(), terminal)
