@@ -1,57 +1,29 @@
-from textwrap import wrap
-
-from .base import ABCUIElement, ABCContainerElement, VAlign
+from .terminal import get_terminal
 
 
-class Fill(ABCUIElement):
-    min_width = None
-    max_width = None
-    min_height = None
-    max_height = None
+class Root:
+    # FIXME: would like to inherit from an ABC, same as all other elements
+    def __init__(self, element, terminal=None, *args, **kwargs):
+        '''Represents the root element of a tree of UI elements. We are
+        associated with a blessings.Terminal object, so we're in the unique
+        position of knowing our own width and height constraints, and are
+        responsible for passing those down the tree when we are asked to draw
+        ourselves.
 
-    def __init__(self, fillchar='.'):
-        super().__init__(fillchar=fillchar)
-
-    def _draw(self, width, height):
-        return []
-
-
-class Text(ABCUIElement):
-    min_width = None
-    max_width = None
-    min_height = None
-    max_height = None
-
-    def __init__(self, content, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.content = content
-
-    def _draw(self, width, height):
-        return wrap(self.content, width)
-
-
-class Stack(ABCContainerElement):
-    max_width = None
-    max_height = None
-
-    def __init__(self, elements, valign=VAlign.bottom):
-        super().__init__(elements)
-        self.valign = valign
+        :parameter element: The element which will be drawn when the root is
+            drawn.
+        '''
+        self.element = element
+        self.terminal = terminal or get_terminal()
+        self.element.terminal = self.terminal
 
     @property
-    def min_width(self):
-        try:
-            return max(
-                element.min_width for element in self if element.min_width)
-        except ValueError:
-            return
+    def width(self):
+        return self.terminal.width
 
     @property
-    def min_height(self):
-        return sum(element.min_height or 1 for element in self)
+    def height(self):
+        return self.terminal.height
 
-    def _draw(self, width, height):
-        lines = []
-        for element in self:
-            lines.extend(element.draw(width, element.min_height or 1))
-        return lines
+    def draw(self, width, height):
+        return self.element.draw(width, height)

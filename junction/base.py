@@ -1,37 +1,33 @@
-from enum import Enum, unique
-from abc import ABCMeta, abstractmethod, abstractproperty
-
-
-@unique
-class VAlign(Enum):
-    top = 1
-    middle = 2
-    bottom = 3
-
-
-@unique
-class HAlign(Enum):
-    left = 1
-    center = 2
-    right = 3
+from abc import ABCMeta, abstractmethod
 
 
 class ABCUIElement(metaclass=ABCMeta):
-    min_width = abstractproperty()
-    max_width = abstractproperty()
-    min_height = abstractproperty()
-    max_height = abstractproperty()
+    min_width = None
+    max_width = None
+    min_height = None
+    max_height = None
 
-    @abstractmethod
-    def _draw(self, width, height):
-        pass
+    _all_valigns = 'top', 'middle', 'bottom'
+    _possible_valigns = _all_valigns
+    _all_haligns = 'left', 'center', 'right'
+    _possible_haligns = _all_haligns
 
-    def __init__(self, halign=HAlign.left, valign=VAlign.top, fillchar=' '):
+    def __init__(self, halign='left', valign='top', fillchar=' ', name=''):
         self._halign = None
         self._valign = None
         self.halign = halign
         self.valign = valign
         self.fillchar = fillchar
+        self.name = name
+        self.terminal = None
+
+    def __repr__(self):
+        if self.name:
+            return '<{} element {!r}>'.format(
+                self.__class__.__name__, self.name)
+        else:
+            return '<{} element at {}>'.format(
+                self.__class__.__name__, hex(id(self)))
 
     @property
     def halign(self):
@@ -43,10 +39,14 @@ class ABCUIElement(metaclass=ABCMeta):
         programmatic error here than have to work out why alignment is odd when
         we sliently fail!
         '''
-        if value not in HAlign:
+        if value not in self._possible_haligns:
+            if value in self._all_haligns:
+                msg = 'non-permitted'
+            else:
+                msg = 'non-existant'
             raise ValueError(
-                "Can't set non-existant HAlign {!r} on element {!r}".format(
-                    value, self))
+                "Can't set {} horizontal alignment {!r} on element "
+                "{!r}".format(msg, value, self))
         self._halign = value
 
     @property
@@ -59,66 +59,16 @@ class ABCUIElement(metaclass=ABCMeta):
         programmatic error here than have to work out why alignment is odd when
         we sliently fail!
         '''
-        if value not in VAlign:
+        if value not in self._possible_valigns:
+            if value in self._all_valigns:
+                msg = 'non-permitted'
+            else:
+                msg = 'non-existant'
             raise ValueError(
-                "Can't set non-existant VAlign {!r} on element {!r}".format(
-                    value, self))
+                "Can't set {} vertical alignment {!r} on element "
+                "{!r}".format(msg, value, self))
         self._valign = value
 
-    def _horizontally_bound_output(self, draw_output, width):
-        for i, line in enumerate(draw_output):
-            if len(line) > width:
-                draw_output[i] = line[:width]
-            else:
-                if self._halign is HAlign.left:
-                    draw_output[i] = line.ljust(width, self.fillchar)
-                elif self._halign is HAlign.center:
-                    draw_output[i] = line.center(width, self.fillchar)
-                elif self._halign is HAlign.right:
-                    draw_output[i] = line.rjust(width, self.fillchar)
-        return draw_output
-
-    def _vertically_bound_output(self, draw_output, width, height):
-        if len(draw_output) > height:
-            if self._valign is VAlign.top:
-                slice_ = slice(None, height)
-            elif self._valign is VAlign.bottom:
-                slice_ = slice(-height, None)
-            elif self._valign is VAlign.middle:
-                extra = len(draw_output) - height
-                slice_ = slice(extra // 2, (extra + 1) // 2)
-            result = draw_output[slice_]
-        else:
-            missing = height - len(draw_output)
-            result = [self.fillchar * width] * missing
-            if self._valign is VAlign.top:
-                index = 0
-            elif self._valign is VAlign.bottom:
-                index = len(result)
-            elif self._valign is VAlign.middle:
-                index = len(result) // 2
-            result[index:index] = draw_output
-        return result
-
-    def draw(self, width, height):
-        draw_output = self._draw(width, height)
-        draw_output = self._vertically_bound_output(draw_output, width, height)
-        draw_output = self._horizontally_bound_output(draw_output, width)
-        return draw_output
-
-
-class ABCContainerElement(ABCUIElement):
-    def __init__(self, elements, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._content = []
-        for element in elements:
-            self.add_element(element)
-
-    def __iter__(self):
-        return iter(self._content)
-
-    def add_element(self, element):
-        self._content.append(element)
-
-    def remove_element(self, element):
-        self._content.remove(element)
+    @abstractmethod
+    def draw(self, width, height, x=0, y=0, x_crop=None, y_crop=None):
+        pass

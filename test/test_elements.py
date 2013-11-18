@@ -1,31 +1,37 @@
 from unittest import TestCase
+from mock import Mock, call
 
-from junction.base import VAlign, HAlign
-from junction.elements import Fill, Text, Stack
+from junction.terminal import Terminal
+from junction.display_elements import Fill, Text
+from junction.container_elements import Stack
 
 
 class TestElements(TestCase):
+    def setUp(self):
+        self.terminal = Mock(autospec=Terminal)
+
     def test_set_get_alignment(self):
         fill = Fill()
-        fill.valign = VAlign.middle
-        self.assertEqual(fill.valign, VAlign.middle)
-        def bad():
+        fill.valign = 'middle'
+        self.assertEqual(fill.valign, 'middle')
+        with self.assertRaises(ValueError):
             fill.valign = 'wrong'
-        self.assertRaises(ValueError, bad)
-        fill.halign = HAlign.center
-        self.assertEqual(fill.halign, HAlign.center)
-        def bad():
+        fill.halign = 'center'
+        self.assertEqual(fill.halign, 'center')
+        with self.assertRaises(ValueError):
             fill.halign = 'wrong'
-        self.assertRaises(ValueError, bad)
+
+    def test_root(self):
+        pass
 
     def test_fill(self):
         fill = Fill()
-        self.assertEqual(fill.draw(10, 0), [])
-        self.assertEqual(fill.draw(10, 1), ['..........'])
-        self.assertEqual(fill.draw(2, 2), ['..', '..'])
-        self.assertEqual(fill.draw(0, 4), ['', '', '', ''])
+        self.assertEqual(fill._get_block(10, 0), [])
+        self.assertEqual(fill._get_block(10, 1), ['..........'])
+        self.assertEqual(fill._get_block(2, 2), ['..', '..'])
+        self.assertEqual(fill._get_block(0, 4), ['', '', '', ''])
         fill = Fill('o')
-        self.assertEqual(fill.draw(1, 1), ['o'])
+        self.assertEqual(fill._get_block(1, 1), ['o'])
 
     def test_text(self):
         content = 'The quick brown fox jumps over the lazy dog'
@@ -35,59 +41,97 @@ class TestElements(TestCase):
             'fox jumps over   ',
             'the lazy dog     ',
             '                 ']
-        self.assertEqual(text.draw(17, 4), expected)
-        text = Text(content, halign=HAlign.center)
+        self.assertEqual(
+            text._get_cropped_block(17, 4), expected)
+        text = Text(content, halign='center')
         expected = [
             ' The quick brown ',
             '  fox jumps over ',
             '   the lazy dog  ']
-        self.assertEqual(text.draw(17, 3), expected)
-        text = Text(content, halign=HAlign.right)
+        self.assertEqual(text._get_cropped_block(17, 3), expected)
+        text = Text(content, halign='right')
         expected = [
             '  The quick brown fox jumps',
             '          over the lazy dog']
-        self.assertEqual(text.draw(27, 2), expected)
-        text = Text(content, valign=VAlign.middle)
+        self.assertEqual(text._get_cropped_block(27, 2), expected)
+        text = Text(content, valign='middle')
         expected = [
             ' ' * len(content),
-            content,
             ' ' * len(content),
+            content,
             ' ' * len(content)]
-        self.assertEqual(text.draw(len(content), 4), expected)
-        text = Text(content, valign=VAlign.bottom)
+        self.assertEqual(text._get_cropped_block(len(content), 4), expected)
+        text = Text(content, valign='bottom')
         expected = [
             '                 ',
             'The quick brown  ',
             'fox jumps over   ',
             'the lazy dog     ']
-        self.assertEqual(text.draw(17, 4), expected)
-        text = Text(content, valign=VAlign.bottom, fillchar='/')
+        self.assertEqual(text._get_cropped_block(17, 4), expected)
+        text = Text(content, valign='bottom', fillchar='/')
         expected = [
             '/////////////////',
             'The quick brown//',
             'fox jumps over///',
             'the lazy dog/////']
-        self.assertEqual(text.draw(17, 4), expected)
+        self.assertEqual(text._get_cropped_block(17, 4), expected)
 
-    def test_stack(self):
+    def test_stack_limits(self):
+        stack = Stack()
+        self.assertEqual(stack.min_height, 0)
         fill1 = Fill('1')
         fill2 = Fill('2')
+        stack.add_element(fill1)
+        stack.add_element(fill2)
+        self.assertEqual(stack.min_height, 2)
         fill2.min_height = 2
-        stack = Stack([fill1, fill2])
-        self.assertEqual(
-            stack.draw(5, 4), ['     ', '11111', '22222', '22222'])
         self.assertEqual(stack.min_height, 3)
         self.assertIsNone(stack.min_width)
-        fill2.min_width = 7
+        fill1.min_width = 7
         self.assertEqual(stack.min_width, 7)
-        self.assertEqual(stack.draw(3, 2), ['222', '222'])
-        stack.valign = VAlign.top
-        self.assertEqual(stack.draw(3, 2), ['111', '222'])
-        self.assertEqual(stack.draw(3, 1), ['111'])
-        fill3 = Fill('3')
+
+    def test_stack_alignment(self):
+        stack = Stack()
+        with self.assertRaises(ValueError):
+            stack.valign = 'middle'
+
+    def test_stack(self):
+        fill1 = Fill('1', name='1')
+        fill2 = Fill('2', name='2')
+        fill2.min_height = 2
+        stack = Stack([fill1, fill2])
+        stack.terminal = self.terminal
+        stack.draw(5, 4)
+        self.terminal.draw_block.assert_has_calls([
+            call(['11111'], 0, 0),
+            call(['22222', '22222'], 0, 1)])
+        self.terminal.draw_block.reset_mock()
+        self.assertIsNone(stack.min_width)
+        stack.draw(3, 2)
+        self.terminal.draw_block.assert_has_calls([
+            call(['111'], 0, 0),
+            call(['222'], 0, 1)])
+        self.terminal.draw_block.reset_mock()
+        stack.draw(4, 1)
+        self.terminal.draw_block.assert_has_calls([
+            call(['1111'], 0, 0)])
+        self.terminal.draw_block.reset_mock()
+        stack.valign = 'bottom'
+        stack.draw(3, 2)
+        self.terminal.draw_block.assert_has_calls([
+            call(['222', '222'], 0, 0)])
+        self.terminal.draw_block.reset_mock()
+        fill3 = Fill('3', name='3')
         stack.add_element(fill3)
-        self.assertEqual(
-            stack.draw(5, 4), ['11111', '22222', '22222', '33333'])
+        stack.draw(5, 4)
+        self.terminal.draw_block.assert_has_calls([
+            call(['33333'], 0, 3),
+            call(['22222', '22222'], 0, 1),
+            call(['11111'], 0, 0)])
+        self.terminal.draw_block.reset_mock()
         stack.remove_element(fill2)
-        stack.valign = VAlign.middle
-        self.assertEqual(stack.draw(2, 4), ['  ', '11', '33', '  '])
+        stack.draw(5, 4)
+        self.terminal.draw_block.assert_has_calls([
+            call(['33333'], 0, 3),
+            call(['11111'], 0, 2)])
+        self.terminal.draw_block.reset_mock()
