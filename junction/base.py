@@ -29,25 +29,33 @@ class ABCUIElement(metaclass=ABCMeta):
             return '<{} element at {}>'.format(
                 self.__class__.__name__, hex(id(self)))
 
+    def _set_align(self, orientation, value):
+        '''We define a setter because it's better to diagnose this kind of
+        programmatic error here than have to work out why alignment is odd when
+        we sliently fail!
+        '''
+        orientation_letter = orientation[0]
+        possible_alignments = getattr(
+            self, '_possible_{}aligns'.format(orientation_letter))
+        all_alignments = getattr(
+            self, '_all_{}aligns'.format(orientation_letter))
+        if value not in possible_alignments:
+            if value in all_alignments:
+                msg = 'non-permitted'
+            else:
+                msg = 'non-existant'
+            raise ValueError(
+                "Can't set {} {} alignment {!r} on element {!r}".format(
+                    msg, orientation, value, self))
+        setattr(self, '_{}align'.format(orientation_letter), value)
+
     @property
     def halign(self):
         return self._halign
 
     @halign.setter
     def halign(self, value):
-        '''We define a setter because it's better to diagnose this kind of
-        programmatic error here than have to work out why alignment is odd when
-        we sliently fail!
-        '''
-        if value not in self._possible_haligns:
-            if value in self._all_haligns:
-                msg = 'non-permitted'
-            else:
-                msg = 'non-existant'
-            raise ValueError(
-                "Can't set {} horizontal alignment {!r} on element "
-                "{!r}".format(msg, value, self))
-        self._halign = value
+        self._set_align('horizontal', value)
 
     @property
     def valign(self):
@@ -55,19 +63,7 @@ class ABCUIElement(metaclass=ABCMeta):
 
     @valign.setter
     def valign(self, value):
-        '''We define a setter because it's better to diagnose this kind of
-        programmatic error here than have to work out why alignment is odd when
-        we sliently fail!
-        '''
-        if value not in self._possible_valigns:
-            if value in self._all_valigns:
-                msg = 'non-permitted'
-            else:
-                msg = 'non-existant'
-            raise ValueError(
-                "Can't set {} vertical alignment {!r} on element "
-                "{!r}".format(msg, value, self))
-        self._valign = value
+        self._set_align('vertical', value)
 
     @abstractmethod
     def draw(self, width, height, x=0, y=0, x_crop=None, y_crop=None):
