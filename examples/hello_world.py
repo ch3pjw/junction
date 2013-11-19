@@ -1,9 +1,5 @@
-from junction import Terminal, Text
-
-terminal = Terminal()
+from junction import Root, Text
 
 text = Text('Hello world')
-text.terminal = terminal
-with terminal.fullscreen():
-    text.draw(width=6, height=terminal.height)
-    input()
+root = Root(text)
+root.run()

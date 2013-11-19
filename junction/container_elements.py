@@ -1,11 +1,13 @@
 from abc import abstractmethod
 
 from .base import ABCUIElement
+from .terminal import get_terminal
 
 
 class ABCContainerElement(ABCUIElement):
     def __init__(self, elements=None, *args, **kwargs):
         self._content = []
+        self._active_element = None
         self._terminal = None
         super().__init__(*args, **kwargs)
         elements = elements or []
@@ -33,6 +35,7 @@ class ABCContainerElement(ABCUIElement):
 
     def add_element(self, element):
         self._content.append(element)
+        self._active_element = element
         element.terminal = self.terminal
 
     def remove_element(self, element):
@@ -43,6 +46,29 @@ class ABCContainerElement(ABCUIElement):
                 self._get_elements_sizes_and_positions(width, height, x, y)):
             element.draw(
                 width, height, x, y, x_crop=self._halign, y_crop=self._valign)
+
+
+class Root:
+    def __init__(self, element, terminal=None, *args, **kwargs):
+        '''Represents the root element of a tree of UI elements. We are
+        associated with a Terminal object, so we're in the unique position of
+        knowing our own width and height constraints, and are responsible for
+        passing those down the tree when we are asked to draw ourselves.
+
+        :parameter element: The element which will be drawn when the root is
+            drawn.
+        '''
+        self.element = element
+        self.terminal = terminal or get_terminal()
+        self.element.terminal = self.terminal
+        self.testing = False
+
+    def run(self):
+        with self.terminal.fullscreen():
+            self.element.draw(self.terminal.width, self.terminal.height)
+            if not self.testing:
+                # FIXME: Blocking for now just to see output
+                input()
 
 
 class Stack(ABCContainerElement):

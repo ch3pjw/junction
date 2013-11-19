@@ -1,14 +1,15 @@
 from unittest import TestCase
-from mock import Mock, call
+from mock import Mock, MagicMock, call
 
 from junction.terminal import Terminal
 from junction.display_elements import Fill, Text
-from junction.container_elements import Stack
+from junction.container_elements import Root, Stack
 
 
 class TestElements(TestCase):
     def setUp(self):
         self.terminal = Mock(autospec=Terminal)
+        self.terminal.fullscreen.return_value = MagicMock()
 
     def test_set_get_alignment(self):
         fill = Fill()
@@ -22,7 +23,14 @@ class TestElements(TestCase):
             fill.halign = 'wrong'
 
     def test_root(self):
-        pass
+        fill = Fill()
+        self.terminal.width = 4
+        self.terminal.height = 4
+        root = Root(fill, terminal=self.terminal)
+        root.testing = True  # FIXME just whilst we're blocking with input()
+        root.run()
+        self.terminal.draw_block.assert_called_with(
+            ['....', '....', '....', '....'], 0, 0)
 
     def test_fill(self):
         fill = Fill()
