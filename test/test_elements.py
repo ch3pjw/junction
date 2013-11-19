@@ -6,11 +6,7 @@ from junction.display_elements import Fill, Text
 from junction.container_elements import Root, Stack
 
 
-class TestElements(TestCase):
-    def setUp(self):
-        self.terminal = Mock(autospec=Terminal)
-        self.terminal.fullscreen.return_value = MagicMock()
-
+class TestDisplayElements(TestCase):
     def test_set_get_alignment(self):
         fill = Fill()
         fill.valign = 'middle'
@@ -21,16 +17,6 @@ class TestElements(TestCase):
         self.assertEqual(fill.halign, 'center')
         with self.assertRaises(ValueError):
             fill.halign = 'wrong'
-
-    def test_root(self):
-        fill = Fill()
-        self.terminal.width = 4
-        self.terminal.height = 4
-        root = Root(fill, terminal=self.terminal)
-        root.testing = True  # FIXME just whilst we're blocking with input()
-        root.run()
-        self.terminal.draw_block.assert_called_with(
-            ['....', '....', '....', '....'], 0, 0)
 
     def test_fill(self):
         fill = Fill()
@@ -83,6 +69,22 @@ class TestElements(TestCase):
             'fox jumps over///',
             'the lazy dog/////']
         self.assertEqual(text._get_cropped_block(17, 4), expected)
+
+
+class TestContainerElements(TestCase):
+    def setUp(self):
+        self.terminal = Mock(autospec=Terminal)
+        self.terminal.fullscreen.return_value = MagicMock()
+
+    def test_root(self):
+        fill = Fill()
+        self.terminal.width = 4
+        self.terminal.height = 4
+        root = Root(fill, terminal=self.terminal)
+        root.testing = True  # FIXME just whilst we're blocking with input()
+        root.run()
+        self.terminal.draw_block.assert_called_with(
+            ['....', '....', '....', '....'], 0, 0)
 
     def test_stack_limits(self):
         stack = Stack()
