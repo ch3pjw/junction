@@ -1,4 +1,9 @@
 from abc import ABCMeta, abstractmethod
+from collections import namedtuple
+
+
+Geometry = namedtuple(
+    'Geometry', ['width', 'height', 'x', 'y', 'x_crop', 'y_crop'])
 
 
 class ABCUIElement(metaclass=ABCMeta):
@@ -21,12 +26,7 @@ class ABCUIElement(metaclass=ABCMeta):
         self.name = name
         self.terminal = None
         self.updated = True
-        self._last_width = None
-        self._last_height = None
-        self._last_x = None
-        self._last_y = None
-        self._last_x_crop = None
-        self._last_y_crop = None
+        self._previous_geometry = None
 
     def __repr__(self):
         if self.name:
@@ -74,12 +74,7 @@ class ABCUIElement(metaclass=ABCMeta):
 
     def draw(self, width, height, x=0, y=0, x_crop='left', y_crop='top'):
         self._draw(width, height, x, y, x_crop, y_crop)
-        self._last_width = width
-        self._last_height = height
-        self._last_x = x
-        self._last_y = y
-        self._last_x_crop = x_crop
-        self._last_y_crop = y_crop
+        self._previous_geometry = Geometry(width, height, x, y, x_crop, y_crop)
         self.updated = False
 
     @abstractmethod
@@ -87,9 +82,7 @@ class ABCUIElement(metaclass=ABCMeta):
         pass
 
     def update(self):
-        if any(attr is None for attr in (
-                self._last_width, self._last_height, self._last_x,
-                self._last_y, self._last_x_crop, self._last_y_crop)):
+        if self._previous_geometry is None:
             raise ValueError("draw() must be called on {!r} before it can be "
                              "updated".format(self))
         self._update()

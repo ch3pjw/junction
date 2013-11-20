@@ -42,9 +42,7 @@ class ABCDisplayElement(ABCUIElement):
         term.draw_block(block, x, y)
 
     def _update(self):
-        self._draw(
-            self._last_width, self._last_height, self._last_x, self._last_y,
-            self._last_x_crop, self._last_y_crop)
+        self._draw(*self._previous_geometry)
 
     @abstractmethod
     def _get_block(self, width, height):
