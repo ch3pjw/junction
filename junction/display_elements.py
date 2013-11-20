@@ -15,7 +15,7 @@ class ABCDisplayElement(ABCUIElement):
         'middle': 'middle',
         'bottom': 'end'}
 
-    def draw(self, width, height, x=0, y=0, x_crop='left', y_crop='top'):
+    def _draw(self, width, height, x, y, x_crop, y_crop):
         '''Instuct the UI element to draw itself to the terminal.
 
         :parameter width: The width that the element must take up on the screen
@@ -40,6 +40,11 @@ class ABCDisplayElement(ABCUIElement):
         # UI element's rendered area text to the required area:
         block = self._do_crop(block, width, height, x_crop, y_crop)
         term.draw_block(block, x, y)
+
+    def _update(self):
+        self._draw(
+            self._last_width, self._last_height, self._last_x, self._last_y,
+            self._last_x_crop, self._last_y_crop)
 
     @abstractmethod
     def _get_block(self, width, height):

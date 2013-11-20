@@ -41,11 +41,20 @@ class ABCContainerElement(ABCUIElement):
     def remove_element(self, element):
         self._content.remove(element)
 
-    def draw(self, width, height, x=0, y=0, x_crop=None, y_crop=None):
+    def _draw(self, width, height, x=0, y=0, x_crop=None, y_crop=None):
+        x_crop = x_crop or self._halign
+        y_crop = y_crop or self._valign
         for element, width, height, x, y in (
                 self._get_elements_sizes_and_positions(width, height, x, y)):
             element.draw(
-                width, height, x, y, x_crop=self._halign, y_crop=self._valign)
+                width, height, x, y, x_crop=x_crop, y_crop=y_crop)
+
+    def _update(self):
+        for element in self:
+            print('here', element)
+            if element.updated:
+                print('there', element.updated)
+                element.update()
 
 
 class Root:

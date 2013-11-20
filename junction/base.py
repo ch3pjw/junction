@@ -20,6 +20,13 @@ class ABCUIElement(metaclass=ABCMeta):
         self.fillchar = fillchar
         self.name = name
         self.terminal = None
+        self.updated = True
+        self._last_width = None
+        self._last_height = None
+        self._last_x = None
+        self._last_y = None
+        self._last_x_crop = None
+        self._last_y_crop = None
 
     def __repr__(self):
         if self.name:
@@ -65,6 +72,29 @@ class ABCUIElement(metaclass=ABCMeta):
     def valign(self, value):
         self._set_align('vertical', value)
 
+    def draw(self, width, height, x=0, y=0, x_crop='left', y_crop='top'):
+        self._draw(width, height, x, y, x_crop, y_crop)
+        self._last_width = width
+        self._last_height = height
+        self._last_x = x
+        self._last_y = y
+        self._last_x_crop = x_crop
+        self._last_y_crop = y_crop
+        self.updated = False
+
     @abstractmethod
-    def draw(self, width, height, x=0, y=0, x_crop=None, y_crop=None):
+    def _draw(self, width, height, x, y, x_crop, y_crop):
+        pass
+
+    def update(self):
+        if any(attr is None for attr in (
+                self._last_width, self._last_height, self._last_x,
+                self._last_y, self._last_x_crop, self._last_y_crop)):
+            raise ValueError("draw() must be called on {!r} before it can be "
+                             "updated".format(self))
+        self._update()
+        self.updated = False
+
+    @abstractmethod
+    def _update(self):
         pass

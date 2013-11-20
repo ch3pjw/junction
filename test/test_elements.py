@@ -2,8 +2,27 @@ from unittest import TestCase
 from mock import Mock, MagicMock, call
 
 from junction.terminal import Terminal
-from junction.display_elements import Fill, Text
-from junction.container_elements import Root, Stack
+from junction.display_elements import ABCDisplayElement, Fill, Text
+from junction.container_elements import ABCContainerElement, Root, Stack
+
+
+class DisplayElementForTest(ABCDisplayElement):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._draw = Mock()
+
+    def _get_block(self, *args, **kwargs):
+        return ['hello', 'world']
+
+
+class ContainerElementForTest(ABCContainerElement):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.terminal = Mock()
+
+    def _get_elements_sizes_and_positions(self, width, height, x, y):
+        for element in self:
+            yield element, width, height, x, y
 
 
 class TestDisplayElements(TestCase):
@@ -75,6 +94,23 @@ class TestContainerElements(TestCase):
     def setUp(self):
         self.terminal = Mock(autospec=Terminal)
         self.terminal.fullscreen.return_value = MagicMock()
+
+    def test_base_draw_and_update(self):
+        element1 = DisplayElementForTest()
+        element2 = DisplayElementForTest()
+        container = ContainerElementForTest([element1, element2])
+        with self.assertRaises(ValueError):
+            container.update()
+        container.draw(1, 2, 3, 4, 'bottom', 'right')
+        element1._draw.assert_called_once_with(1, 2, 3, 4, 'bottom', 'right')
+        element2._draw.assert_called_once_with(1, 2, 3, 4, 'bottom', 'right')
+        element1._draw.reset_mock()
+        element2._draw.reset_mock()
+        element2.updated = True
+        container.update()
+        self.assertEqual(element1._draw.call_count, 0)
+        element2._draw.assert_called_once_with(1, 2, 3, 4, 'bottom', 'right')
+        self.assertFalse(element2.updated)
 
     def test_root(self):
         fill = Fill()
