@@ -1,20 +1,8 @@
 from unittest import TestCase
-#from mock import patch
+from io import StringIO
+import blessings
 
 from junction.formatting import Format, StringWithFormatting
-#from junction import Terminal, Fill, Text, Stack
-
-
-#class TestFormattingBehviour(TestCase):
-#    def setUp(self):
-#        self.terminal = Terminal(force_styling=True)
-#
-#    @patch('junction.Terminal.draw_block', autospec=True)
-#    def _test_default_formatting(self, mock_draw_block):
-#        fill = Fill()
-#        fill.terminal = self.terminal
-#        fill.default_format = self.terminal.bold + self.terminal.green
-#        fill
 #
 #    def _test_formatting_in_content(self):
 #        text = Text(
@@ -26,9 +14,47 @@ from junction.formatting import Format, StringWithFormatting
 #
 #    def _test_default_formatting_inherited_in_container(self):
 #        pass
+from junction import Terminal, Fill, Text, Stack
+
+
+class TestFormattingBehviour(TestCase):
+    def setUp(self):
+        self.stream = StringIO()
+        self.terminal = Terminal(stream=self.stream, force_styling=True)
+
+    def test_default_formatting(self):
+        fill = Fill()
+        fill.terminal = self.terminal
+        fill.default_format = self.terminal.bold  # + self.terminal.green
+        fill.draw(3, 1)
+        bless_term = blessings.Terminal(force_styling=True)
+        self.assertEqual(
+            self.stream.getvalue(),
+            bless_term.bold + bless_term.move(0, 0) + '...')
 
 
 class TestFormat(TestCase):
+    def test_repr(self):
+        self.assertEqual(repr(Format('hello')), "Format('hello')")
+        self.assertEqual(
+            repr(Format('hello', 'some name')), 'Format(some name)')
+
+    def test_call_with_parametrizing_string(self):
+        ps = blessings.ParametrizingString('cup')  # Must be legit curses cap
+        f = Format(ps)
+        self.assertEqual(f, ps)
+        self.assertEqual(f(1, 2), ps(1, 2))
+        self.assertIsInstance(f(2, 3), Format)
+        self.assertIsNot(f(3, 4), f)
+        f.name = 'bob'
+        self.assertEqual(f(4, 5).name, 'bob')
+
+    def test_call_with_regular_content_string(self):
+        f = Format('magic escape seq')
+        result = f('printable text')
+        self.assertIsInstance(result, StringWithFormatting)
+        self.assertEqual(result, f + 'printable text' + Format(None))
+
     def test_draw(self):
         f = Format('Some escape sequence')
         self.assertEqual(f.draw('Whatever is normal?'), 'Some escape sequence')
@@ -60,6 +86,11 @@ class TestStringWithFormatting(TestCase):
     def test_str(self):
         self.assertEqual(str(self.swf), 'Hello World!')
 
+    def test_repr(self):
+        self.assertEqual(
+            repr(self.swf),
+            "StringWithFormatting('Hello ', Format('hiding'), 'World!')")
+
     def test_draw(self):
         self.assertEqual(self.swf.draw('normal'), 'Hello hidingWorld!')
 
@@ -68,6 +99,7 @@ class TestStringWithFormatting(TestCase):
         self.assertEqual(self.swf, StringWithFormatting(
             ('Hello ', Format('hiding'), 'World!')))
         self.assertNotEqual(self.swf, StringWithFormatting('Hello World!'))
+        self.assertNotEqual(self.swf, 'Hello World!')
 
     def test_addition(self):
         # String prefix

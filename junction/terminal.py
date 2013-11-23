@@ -9,6 +9,8 @@ class Terminal(blessings.Terminal):
         self._normal = super()._resolve_formatter('normal')
 
     def draw_block(self, block, x, y, normal=None):
+        if normal is not None:
+            self.stream.write(normal)
         for y, line in enumerate(block, start=y):
             self.stream.write(self.move(y, x))
             if isinstance(line, StringWithFormatting):

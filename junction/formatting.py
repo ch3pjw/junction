@@ -101,8 +101,6 @@ class StringWithFormatting:
     def __radd__(self, other):
         if isinstance(other, (str, Format)):
             return self.__class__((other,) + self._content)
-        else:
-            return self.__class__(other._content + self._content)
 
     def _enumerate_chars(self):
         num_chars = 0
