@@ -85,7 +85,7 @@ class StringWithFormatting:
         if isinstance(other, (str, Format)):
             return self.__class__(self._content + (other,))
         else:
-            return self.__class(self._content + other._content)
+            return self.__class__(self._content + other._content)
 
     def __radd__(self, other):
         if isinstance(other, (str, Format)):

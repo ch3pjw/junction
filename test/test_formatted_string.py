@@ -70,21 +70,30 @@ class TestStringWithFormatting(TestCase):
         self.assertNotEqual(self.swf, StringWithFormatting('Hello World!'))
 
     def test_addition(self):
+        # String prefix
         long_swf = 'Prefix' + self.swf
         self.assertIsInstance(long_swf, StringWithFormatting)
         self.assertEqual(str(long_swf), 'PrefixHello World!')
+        # Format prefix
         long_swf = Format('PrePrefixFormat') + long_swf
         self.assertIsInstance(long_swf, StringWithFormatting)
         self.assertEqual(long_swf._content, (
             Format('PrePrefixFormat'), 'Prefix', 'Hello ', Format('hiding'),
             'World!'))
+        # String suffix
         long_swf = self.swf + 'Suffix'
         self.assertIsInstance(long_swf, StringWithFormatting)
         self.assertEqual(str(long_swf), 'Hello World!Suffix')
+        # Format suffix
         long_swf = long_swf + Format('SufSuffixFormat')
         self.assertEqual(long_swf._content, (
             'Hello ', Format('hiding'), 'World!', 'Suffix',
             Format('SufSuffixFormat')))
+        # Adding two StringWithFormatting objects
+        long_swf = self.swf + self.swf
+        self.assertEqual(long_swf._content, (
+            'Hello ', Format('hiding'), 'World!', 'Hello ', Format('hiding'),
+            'World!'))
 
     def test_get_item_index(self):
         self.assertEqual(self.swf[2], 'l')
