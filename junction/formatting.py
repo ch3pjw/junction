@@ -1,32 +1,46 @@
 from blessings import ParametrizingString
 
 
-class Format:
-    '''A wrapper for blessings.Terminal formatting commands that will delay the
-    call to retrieve formatting until we're actually drawing an element. This
-    means that parent elements could change style properties such as normal and
-    we stay up-to-date.
+class Format(str):
+    '''A replacement for blessings.Terminal formatting strings that we can use
+    to delay the determination of what 'normal' formatting is until we're
+    actually drawing an element. We're also used to produce smart
+    StringWithFormatting objects that can be processed like strings without
+    terminal escape sequences in them for the purposes of layout generation
+    (i.e. using slices), but will preserve formatting.
     '''
-    def __init__(self, escape_sequence, name=None):
+    __slots__ = ('_normal', '_orig_class', 'name')
+
+    def __new__(cls, escape_sequence, name=None):
         '''
         :parameter escape_sequence: the text-formatting terminal escape
-            sequence this Format object is to encapsulate, or None if this
+            sequence this Format object is to embody, or None if this
             object is to act like the 'normal' format, but where 'normal' could
             potentially be another format defined arbitrarily.
         '''
-        self.escape_sequence = escape_sequence
-        self.name = name
-
-    def __str__(self):
-        return self.escape_sequence
+        if escape_sequence is None:
+            # Whether this format is representing 'normal' formatting. We
+            # provide this also to maintain compatibility with
+            # blessings.ParametrizingString:
+            _normal = True
+            escape_sequence = ''
+        else:
+            _normal = False
+        obj = super().__new__(cls, escape_sequence)
+        obj._orig_class = escape_sequence.__class__
+        obj._normal = _normal
+        obj.name = name
+        return obj
 
     def __repr__(self):
         return '{}({})'.format(
-            self.__class__.__name__, self.name or repr(self.escape_sequence))
+            self.__class__.__name__, self.name or super().__repr__())
 
     def __call__(self, *args):
-        if isinstance(self.escape_sequence, ParametrizingString):
-            return self.__class__(self.escape_sequence(*args), name=self.name)
+        if issubclass(self._orig_class, ParametrizingString):
+            return self.__class__(
+                self._orig_class.__call__(self, *args),
+                name=self.name)
         else:
             # Emulate the behaviour of blessings.FormattingString, but with our
             # StringWithFormatting objects instead
@@ -35,12 +49,6 @@ class Format:
                 result += word
             result += Format(None)
             return result
-
-    def __eq__(self, other):
-        if hasattr(other, 'escape_sequence'):
-            return self.escape_sequence == other.escape_sequence
-        else:
-            return False
 
     def __add__(self, other):
         if isinstance(other, StringWithFormatting):
@@ -52,7 +60,10 @@ class Format:
         return StringWithFormatting((other, self))
 
     def draw(self, normal):
-        return self.escape_sequence or normal
+        if self._normal:
+            return normal
+        else:
+            return self
 
 
 class StringWithFormatting:
