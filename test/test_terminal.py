@@ -10,8 +10,7 @@ class TestTerminal(TestCase):
     def test_draw_block(self):
         self.maxDiff = 0  # protect from difficult terminal output on failure
         blessings_term = blessings.Terminal(force_styling=True)
-        test_term = Terminal()
-        test_term.stream = StringIO()
+        test_term = Terminal(stream=StringIO(), force_styling=True)
         test_term.draw_block(['hello', 'world'], x=3, y=4)
         self.assertEqual(
             test_term.stream.getvalue(),
