@@ -1,4 +1,6 @@
 from blessings import ParametrizingString
+from string import whitespace
+from functools import reduce
 
 
 class Format(str):
@@ -31,6 +33,16 @@ class Format(str):
         obj._normal = _normal
         obj.name = name
         return obj
+
+    def __len__(self):
+        # Terminal escape sequences have no visible length
+        return 0
+
+    def __bool__(self):
+        return True
+
+    def __iter__(self):
+        return iter([self])
 
     def __repr__(self):
         return '{}({})'.format(
@@ -65,10 +77,18 @@ class Format(str):
         else:
             return self
 
+    def split(self, *args):
+        return [self]
+
 
 class StringWithFormatting:
+    __slots__ = ['_content']
+
     def __init__(self, content):
-        self._content = tuple(content)
+        if isinstance(content, self.__class__):
+            self._content = content._content
+        else:
+            self._content = tuple(content)
 
     def __repr__(self):
         return '{}({})'.format(
@@ -105,12 +125,9 @@ class StringWithFormatting:
     def _enumerate_chars(self):
         num_chars = 0
         for string in self._content:
-            if isinstance(string, Format):
-                yield num_chars, string
-            else:
-                for char in string:
-                    num_chars += 1
-                    yield num_chars, char
+            for char in string:
+                num_chars += len(char)
+                yield num_chars, char
 
     def _get_slice(self, start, stop):
         start = start if start is not None else 0
@@ -138,6 +155,77 @@ class StringWithFormatting:
                     result.append(string)
                 break
         return self.__class__(result)
+
+    def _lstrip(self, chunks):
+        self._do_strip(chunks, range(len(chunks)))
+
+    def _rstrip(self, chunks):
+        self._do_strip(chunks, reversed(range(len(chunks))))
+
+    def _do_strip(self, chunks, iter_):
+        del_chunks = []
+        for i in iter_:
+            chunk = chunks[i]
+            if not isinstance(chunk, Format):
+                if chunk.strip() == '':
+                    del_chunks.append(i)
+                else:
+                    break
+        for i in reversed(sorted(del_chunks)):
+            del chunks[i]
+
+    def wrap(self, width):
+        '''Wraps the string at whitepaces, preserving runs of whitespace
+        characters provided they do not fall at a line boundary. The
+        implementation is based on that of textwrap from the standard library.
+        '''
+        result = []
+        chunks = list(self._chunk())
+        while chunks:
+            self._lstrip(chunks)
+            current_line = []
+            current_length = 0
+            while chunks:
+                l = len(chunks[0])
+                if current_length + l <= width:
+                    current_line.append(chunks.pop(0))
+                    current_length += l
+                else:
+                    # Line is full
+                    break
+            # Handle case where chunk is bigger than an entire line
+            if l > width:
+                space_left = width - current_length
+                current_line.append(chunks[0][:space_left])
+                chunks[0] = chunks[0][space_left:]
+            self._rstrip(current_line)
+            result.append(reduce(lambda x, y: x + y, current_line, ''))
+        return result
+
+    def split(self, sep=None, maxsplit=-1):
+        result = []
+        for section in self._content:
+            result.extend(section.split(sep))
+        return result
+
+    def _chunk(self):
+        current_chunk = None
+        previous_char_type = None
+        for _, char in self._enumerate_chars():
+            if isinstance(char, Format):
+                char_type = 'format'
+            elif char in whitespace:
+                char_type = 'break'
+            else:
+                char_type = 'char'
+            if char_type != previous_char_type:
+                if current_chunk:
+                    yield current_chunk
+                current_chunk = char
+            else:
+                current_chunk += char
+            previous_char_type = char_type
+        yield current_chunk
 
     def __getitem__(self, index):
         if isinstance(index, slice):
