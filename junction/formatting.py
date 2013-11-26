@@ -87,6 +87,8 @@ class StringWithFormatting:
     def __init__(self, content):
         if isinstance(content, self.__class__):
             self._content = content._content
+        elif isinstance(content, str):
+            self._content = tuple([content])
         else:
             self._content = tuple(content)
 
@@ -122,12 +124,16 @@ class StringWithFormatting:
         if isinstance(other, (str, Format)):
             return self.__class__((other,) + self._content)
 
-    def _enumerate_chars(self):
-        num_chars = 0
+    def __iter__(self):
         for string in self._content:
             for char in string:
-                num_chars += len(char)
-                yield num_chars, char
+                yield char
+
+    def _enumerate_chars(self):
+        num_chars = 0
+        for char in self:
+            num_chars += len(char)
+            yield num_chars, char
 
     def _get_slice(self, start, stop):
         start = start if start is not None else 0
@@ -156,6 +162,56 @@ class StringWithFormatting:
                 break
         return self.__class__(result)
 
+    def split(self, sep=None, maxsplit=-1):
+        result = []
+        for section in self._content:
+            result.extend(section.split(sep))
+        return result
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return self._get_slice(index.start, index.stop)
+        else:
+            return str(self)[index]
+
+    def _iter_for_draw(self, normal):
+        for string in self._content:
+            if isinstance(string, Format):
+                yield string.draw(normal)
+            else:
+                yield string
+
+    def draw(self, normal):
+        return ''.join(string for string in self._iter_for_draw(normal))
+
+
+class TextWrapper:
+    def __init__(self, width):
+        self.width = width
+
+    def _chunk(self, string_like):
+        '''Generator that splits a string-like object (which can include our
+        StringWithFormatting) into chunks at whitespace boundaries.
+        '''
+        current_chunk = None
+        previous_char_type = None
+        for char in string_like:
+            if isinstance(char, Format):
+                char_type = 'format'
+            elif char in whitespace:
+                char_type = 'break'
+            else:
+                char_type = 'char'
+            if char_type != previous_char_type:
+                if current_chunk:
+                    yield current_chunk
+                current_chunk = char
+            else:
+                # FIXME: this currently won't work with consecutive Formats...
+                current_chunk += char
+            previous_char_type = char_type
+        yield current_chunk
+
     def _lstrip(self, chunks):
         self._do_strip(chunks, range(len(chunks)))
 
@@ -174,71 +230,38 @@ class StringWithFormatting:
         for i in reversed(sorted(del_chunks)):
             del chunks[i]
 
-    def wrap(self, width):
-        '''Wraps the string at whitepaces, preserving runs of whitespace
-        characters provided they do not fall at a line boundary. The
-        implementation is based on that of textwrap from the standard library.
+    def wrap(self, text):
+        '''Wraps the text object to width, breaking at whitespaces. Runs of
+        whitespace characters are preserved, provided they do not fall at a
+        line boundary. The implementation is based on that of textwrap from the
+        standard library, but we can cope with StringWithFormatting objects.
+
+        :returns: a list of string-like objects.
         '''
         result = []
-        chunks = list(self._chunk())
+        chunks = list(self._chunk(text))
         while chunks:
             self._lstrip(chunks)
             current_line = []
             current_length = 0
             while chunks:
                 l = len(chunks[0])
-                if current_length + l <= width:
+                if current_length + l <= self.width:
                     current_line.append(chunks.pop(0))
                     current_length += l
                 else:
                     # Line is full
                     break
             # Handle case where chunk is bigger than an entire line
-            if l > width:
-                space_left = width - current_length
+            if l > self.width:
+                space_left = self.width - current_length
                 current_line.append(chunks[0][:space_left])
                 chunks[0] = chunks[0][space_left:]
             self._rstrip(current_line)
             result.append(reduce(lambda x, y: x + y, current_line, ''))
         return result
 
-    def split(self, sep=None, maxsplit=-1):
-        result = []
-        for section in self._content:
-            result.extend(section.split(sep))
-        return result
 
-    def _chunk(self):
-        current_chunk = None
-        previous_char_type = None
-        for _, char in self._enumerate_chars():
-            if isinstance(char, Format):
-                char_type = 'format'
-            elif char in whitespace:
-                char_type = 'break'
-            else:
-                char_type = 'char'
-            if char_type != previous_char_type:
-                if current_chunk:
-                    yield current_chunk
-                current_chunk = char
-            else:
-                current_chunk += char
-            previous_char_type = char_type
-        yield current_chunk
-
-    def __getitem__(self, index):
-        if isinstance(index, slice):
-            return self._get_slice(index.start, index.stop)
-        else:
-            return str(self)[index]
-
-    def _iter_for_draw(self, normal):
-        for string in self._content:
-            if isinstance(string, Format):
-                yield string.draw(normal)
-            else:
-                yield string
-
-    def draw(self, normal):
-        return ''.join(string for string in self._iter_for_draw(normal))
+def wrap(text, width):
+    w = TextWrapper(width)
+    return w.wrap(text)

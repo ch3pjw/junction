@@ -2,6 +2,7 @@ from unittest import TestCase
 from io import StringIO
 import blessings
 
+from junction.formatting import Format, StringWithFormatting, TextWrapper, wrap
 from junction.formatting import Format, StringWithFormatting
 #
 #    def _test_formatting_in_content(self):
@@ -15,6 +16,10 @@ from junction.formatting import Format, StringWithFormatting
 #    def _test_default_formatting_inherited_in_container(self):
 #        pass
 from junction import Terminal, Fill, Text, Stack
+
+long_swf = (
+    '  This is a    rather ' + Format('bold') + 'loooong ' + Format('normal') +
+    'string that needs wrapppppping')
 
 
 class TestFormattingBehviour(TestCase):
@@ -114,9 +119,6 @@ class TestFormat(TestCase):
 class TestStringWithFormatting(TestCase):
     def setUp(self):
         self.swf = 'Hello ' + Format('hiding') + 'World!'
-        self.long_swf = (
-            '  This is a    rather ' + Format('bold') + 'loooong ' +
-            Format('normal') + 'string that needs wrapppppping')
 
     def test_len(self):
         self.assertEqual(len(self.swf), len('Hello World!'))
@@ -198,54 +200,92 @@ class TestStringWithFormatting(TestCase):
         expected = Format('one') + Format('two') + 'sage'
         self.assertEqual(swf[3:], expected)
 
-    def test__lstrip(self):
+    def test_split(self):
+        result = long_swf.split()
+        expected = [
+            'This', 'is', 'a', 'rather', Format('bold'), 'loooong',
+            Format('normal'), 'string', 'that', 'needs', 'wrapppppping']
+        self.assertEqual(result, expected)
+
+
+class TestTextWrapper(TestCase):
+    def setUp(self):
+        self.wrapper = TextWrapper(None)
+
+    def test_chunk_str(self):
+        normal = 'Bog-standard  string   with some spaces '
+        result = list(self.wrapper._chunk(normal))
+        expected = [
+            'Bog-standard', '  ', 'string', '   ', 'with', ' ', 'some', ' ',
+            'spaces', ' ']
+        self.assertEqual(result, expected)
+
+    def test_chunk_str_with_formatting(self):
+        result = list(self.wrapper._chunk(long_swf))
+        expected = [
+            '  ', 'This', ' ', 'is', ' ', 'a', '    ', 'rather', ' ',
+            Format('bold'), 'loooong', ' ', Format('normal'), 'string', ' ',
+            'that', ' ', 'needs', ' ', 'wrapppppping']
+        self.assertEqual(result, expected)
+
+    def test_lstrip(self):
         chunks = ['  ', Format('a'), 'hello', ' ', 'world']
-        self.swf._lstrip(chunks)
+        self.wrapper._lstrip(chunks)
         expected = [Format('a'), 'hello', ' ', 'world']
         self.assertEqual(chunks, expected)
 
         chunks = [Format('a'), '  ', 'hello', ' ', 'world']
-        self.swf._lstrip(chunks)
+        self.wrapper._lstrip(chunks)
         self.assertEqual(chunks, expected)
 
         chunks = ['  ', Format('a'), '  ', 'hello', ' ', 'world']
-        self.swf._lstrip(chunks)
+        self.wrapper._lstrip(chunks)
         self.assertEqual(chunks, expected)
 
         chunks = [Format('a'), 'hello', ' ', 'world']
-        self.swf._lstrip(chunks)
+        self.wrapper._lstrip(chunks)
         self.assertEqual(chunks, expected)
 
         chunks = [' ', 'normal', ' ', 'string', ' ', 'with', ' ', 'spaces']
-        self.swf._lstrip(chunks)
+        self.wrapper._lstrip(chunks)
         expected = ['normal', ' ', 'string', ' ', 'with', ' ', 'spaces']
         self.assertEqual(chunks, expected)
 
-    def test__rstrip(self):
+    def test_rstrip(self):
         chunks = ['hello', ' ', 'world', Format('a'), '  ']
-        self.swf._rstrip(chunks)
+        self.wrapper._rstrip(chunks)
         expected = ['hello', ' ', 'world', Format('a')]
         self.assertEqual(chunks, expected)
 
         chunks = ['hello', ' ', 'world', '  ', Format('a')]
-        self.swf._rstrip(chunks)
+        self.wrapper._rstrip(chunks)
         self.assertEqual(chunks, expected)
 
         chunks = ['hello', ' ', 'world', '  ', Format('a'), '  ']
-        self.swf._rstrip(chunks)
+        self.wrapper._rstrip(chunks)
         self.assertEqual(chunks, expected)
 
         chunks = ['hello', ' ', 'world', Format('a')]
-        self.swf._rstrip(chunks)
+        self.wrapper._rstrip(chunks)
         self.assertEqual(chunks, expected)
 
         chunks = ['normal', ' ', 'string', ' ', 'with', ' ', 'spaces', ' ']
-        self.swf._rstrip(chunks)
+        self.wrapper._rstrip(chunks)
         expected = ['normal', ' ', 'string', ' ', 'with', ' ', 'spaces']
         self.assertEqual(chunks, expected)
 
-    def test_wrap(self):
-        result = self.long_swf.wrap(11)
+    def test_wrap_str(self):
+        text = 'The  quick brown fox jumps over the lazy dog'
+        result = wrap(text, width=15)
+        expected = [
+            'The  quick',
+            'brown fox jumps',
+            'over the lazy',
+            'dog']
+        self.assertEqual(result, expected)
+
+    def test_wrap_str_with_formatting(self):
+        result = wrap(long_swf, width=11)
         expected = [
             'This is a',
             'rather' + Format('bold'),
@@ -253,19 +293,4 @@ class TestStringWithFormatting(TestCase):
             'string that',
             'needs wrapp',
             'pppping']
-        self.assertEqual(result, expected)
-
-    def test_split(self):
-        result = self.long_swf.split()
-        expected = [
-            'This', 'is', 'a', 'rather', Format('bold'), 'loooong',
-            Format('normal'), 'string', 'that', 'needs', 'wrapppppping']
-        self.assertEqual(result, expected)
-
-    def test_chunk(self):
-        result = list(self.long_swf._chunk())
-        expected = [
-            '  ', 'This', ' ', 'is', ' ', 'a', '    ', 'rather', ' ',
-            Format('bold'), 'loooong', ' ', Format('normal'), 'string', ' ',
-            'that', ' ', 'needs', ' ', 'wrapppppping']
         self.assertEqual(result, expected)

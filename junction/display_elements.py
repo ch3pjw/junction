@@ -1,9 +1,9 @@
 from abc import abstractmethod
-from textwrap import wrap
 
 from .base import ABCUIElement
 from .util import clamp, crop_or_expand
 from .terminal import get_terminal
+from .formatting import StringWithFormatting, wrap
 
 
 class ABCDisplayElement(ABCUIElement):
