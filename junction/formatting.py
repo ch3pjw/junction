@@ -61,7 +61,7 @@ class Format(str):
             result = self
             for word in args:
                 result += word
-            result += Format(None)
+            result += Format(None, name='normal')
             return result
 
     def __add__(self, other):
