@@ -10,6 +10,8 @@ class Format(str):
     StringWithFormatting objects that can be processed like strings without
     terminal escape sequences in them for the purposes of layout generation
     (i.e. using slices), but will preserve formatting.
+
+    We derive from string so that we can be easily written out to a stream.
     '''
     __slots__ = ('_normal', '_orig_class', 'name')
 
