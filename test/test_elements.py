@@ -26,6 +26,9 @@ class ContainerElementForTest(ABCContainerElement):
 
 
 class TestDisplayElements(TestCase):
+    def setUp(self):
+        self.terminal = Terminal(force_styling=True)
+
     def test_set_get_alignment(self):
         fill = Fill()
         fill.valign = 'middle'
@@ -88,6 +91,29 @@ class TestDisplayElements(TestCase):
             'fox jumps over///',
             'the lazy dog/////']
         self.assertEqual(text._get_cropped_block(17, 4), expected)
+
+    def test_text_with_formatting(self):
+        content = (
+            self.terminal.bold + 'The ' + self.terminal.normal + 'quick ' +
+            self.terminal.red('brown') + ' fox ' +
+            self.terminal.underline('jumps'))  # +
+            #' over {t.green_on_white}the lazy{t.normal} dog'.format(
+            #    t=self.terminal))
+            # FIXME: can't yet handle .format insertion of Format objects into
+            # strings
+        text = Text(content)
+        expected = [
+            (self.terminal.bold + 'The ' + self.terminal.normal + 'quick ' +
+             self.terminal.red + 'brown' + self.terminal.normal + '  '),
+            ('fox ' + self.terminal.underline + 'jumps' +
+             self.terminal.normal + self.terminal.normal + '        '),
+            #+ ' over ' + self.terminal.green_on_white),
+            #('the lazy' + self.terminal.normal + ' dog' +
+            # self.terminal.normal + '     '),
+            '                 ',
+            '                 ']
+        actual = text._get_cropped_block(17, 4)
+        self.assertEqual(actual, expected)
 
 
 class TestContainerElements(TestCase):

@@ -89,4 +89,7 @@ class Text(ABCDisplayElement):
         self.content = content
 
     def _get_block(self, width, height):
-        return wrap(self.content, width)
+        lines = wrap(self.content, width)
+        if any(isinstance(line, StringWithFormatting) for line in lines):
+            lines[-1] += self.terminal.normal
+        return lines

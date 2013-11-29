@@ -3,19 +3,7 @@ from io import StringIO
 import blessings
 
 from junction.formatting import Format, StringWithFormatting, TextWrapper, wrap
-from junction.formatting import Format, StringWithFormatting
-#
-#    def _test_formatting_in_content(self):
-#        text = Text(
-#            self.terminal.bold + 'The ' + self.terminal.normal + 'quick ' +
-#            self.terminal.red('brown') + ' fox ' +
-#            self.terminal.underline('jumps') +
-#            ' over {t.green_on_white}the lazy{t.normal} dog'.format(
-#                t=self.terminal))
-#
-#    def _test_default_formatting_inherited_in_container(self):
-#        pass
-from junction import Terminal, Fill, Text, Stack
+from junction import Terminal, Fill
 
 long_swf = (
     '  This is a    rather ' + Format('bold') + 'loooong ' + Format('normal') +
@@ -37,19 +25,6 @@ class TestFormattingBehviour(TestCase):
         self.assertEqual(
             self.stream.getvalue(),
             bless_term.bold + bless_term.move(0, 0) + '...')
-
-    def _test_formatting_in_content(self):
-        text = Text(
-            self.terminal.bold + 'The ' + self.terminal.normal + 'quick ' +
-            self.terminal.red('brown') + ' fox ' +
-            self.terminal.underline('jumps') +
-            ' over {t.green_on_white}the lazy{t.normal} dog'.format(
-                t=self.terminal))
-        text.terminal = self.terminal
-        text.draw(13, 10)
-
-    def _test_default_formatting_inherited_in_container(self):
-        pass
 
 
 class TestFormat(TestCase):

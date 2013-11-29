@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 
+from .terminal import get_terminal
+
 
 Geometry = namedtuple(
     'Geometry', ['width', 'height', 'x', 'y', 'x_crop', 'y_crop'])
@@ -24,7 +26,7 @@ class ABCUIElement(metaclass=ABCMeta):
         self.valign = valign
         self.fillchar = fillchar
         self.name = name
-        self.terminal = None
+        self._terminal = None
         self.updated = True
         self._previous_geometry = None
         self.default_format = None
@@ -72,6 +74,14 @@ class ABCUIElement(metaclass=ABCMeta):
     @valign.setter
     def valign(self, value):
         self._set_align('vertical', value)
+
+    @property
+    def terminal(self):
+        return self._terminal or get_terminal()
+
+    @terminal.setter
+    def terminal(self, terminal):
+        self._terminal = terminal
 
     def draw(self, width, height, x=0, y=0, x_crop='left', y_crop='top'):
         self._draw(width, height, x, y, x_crop, y_crop)
