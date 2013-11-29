@@ -287,6 +287,7 @@ class TestTextWrapper(TestCase):
             'over the lazy',
             'dog']
         self.assertEqual(result, expected)
+        self.assertEqual(wrap('', 10), [''])
 
     def test_wrap_str_with_formatting(self):
         result = wrap(long_swf, width=11)
@@ -297,4 +298,8 @@ class TestTextWrapper(TestCase):
             'string that',
             'needs wrapp',
             'pppping']
+        self.assertEqual(result, expected)
+        swf = Format('normal') + 'hello'
+        result = wrap(swf, 3)
+        expected = [StringWithFormatting((Format('normal'), 'hel')), 'lo']
         self.assertEqual(result, expected)

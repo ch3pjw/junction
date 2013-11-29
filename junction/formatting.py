@@ -220,7 +220,7 @@ class TextWrapper:
         '''Generator that splits a string-like object (which can include our
         StringWithFormatting) into chunks at whitespace boundaries.
         '''
-        current_chunk = None
+        current_chunk = ''  # Default if we have no characters
         previous_char_type = None
         for char in string_like:
             if isinstance(char, Format):
@@ -270,22 +270,27 @@ class TextWrapper:
         while chunks:
             self._lstrip(chunks)
             current_line = []
-            current_length = 0
+            current_line_length = 0
+            current_chunk_length = 0
             while chunks:
-                l = len(chunks[0])
-                if current_length + l <= self.width:
+                current_chunk_length = len(chunks[0])
+                if current_line_length + current_chunk_length <= self.width:
                     current_line.append(chunks.pop(0))
-                    current_length += l
+                    current_line_length += current_chunk_length
                 else:
                     # Line is full
                     break
             # Handle case where chunk is bigger than an entire line
-            if l > self.width:
-                space_left = self.width - current_length
+            if current_chunk_length > self.width:
+                space_left = self.width - current_line_length
                 current_line.append(chunks[0][:space_left])
                 chunks[0] = chunks[0][space_left:]
             self._rstrip(current_line)
-            result.append(reduce(lambda x, y: x + y, current_line, ''))
+            if current_line:
+                result.append(reduce(
+                    lambda x, y: x + y, current_line[1:], current_line[0]))
+            else:
+                result.append('')
         return result
 
 
