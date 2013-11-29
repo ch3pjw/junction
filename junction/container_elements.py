@@ -8,7 +8,6 @@ class ABCContainerElement(ABCUIElement):
     def __init__(self, elements=None, *args, **kwargs):
         self._content = []
         self._active_element = None
-        self._terminal = None
         super().__init__(*args, **kwargs)
         elements = elements or []
         for element in elements:
@@ -19,7 +18,7 @@ class ABCContainerElement(ABCUIElement):
 
     @property
     def terminal(self):
-        return self._terminal
+        return self._terminal or get_terminal()
 
     @terminal.setter
     def terminal(self, terminal):

@@ -23,22 +23,20 @@ def crop_or_expand(iterable, length, default=' ', scheme='beginning'):
             result = iterable[-length:]
     elif len(iterable) < length:
         # Expand:
-        if not isinstance(default, type(iterable)):
-            # Duck-typing is good, but we're trying to avoid some hard-to-debug
-            # messages more.
-            raise TypeError(
-                "Can't crop or expand the given iterable of type {!r} with "
-                "default value of type {!r}".format(
-                    type(iterable), type(default)))
         missing = length - len(iterable)
-        if scheme == 'beginning':
-            result = iterable + default * missing
-        elif scheme == 'middle':
-            result = (default * ((missing + 1) // 2) +
-                      iterable +
-                      default * (missing // 2))
-        elif scheme == 'end':
-            result = default * missing + iterable
+        try:
+            if scheme == 'beginning':
+                result = iterable + default * missing
+            elif scheme == 'middle':
+                result = (default * ((missing + 1) // 2) +
+                          iterable +
+                          default * (missing // 2))
+            elif scheme == 'end':
+                result = default * missing + iterable
+        except TypeError:
+            raise TypeError(
+                "Can't expand the given iterable of type {!r} with default "
+                "value of type {!r}".format(type(iterable), type(default)))
     else:
         # Perfect :-)
         result = iterable[:]

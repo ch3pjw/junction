@@ -26,6 +26,9 @@ class ContainerElementForTest(ABCContainerElement):
 
 
 class TestDisplayElements(TestCase):
+    def setUp(self):
+        self.terminal = Terminal(force_styling=True)
+
     def test_set_get_alignment(self):
         fill = Fill()
         fill.valign = 'middle'
@@ -89,6 +92,29 @@ class TestDisplayElements(TestCase):
             'the lazy dog/////']
         self.assertEqual(text._get_cropped_block(17, 4), expected)
 
+    def test_text_with_formatting(self):
+        content = (
+            self.terminal.bold + 'The ' + self.terminal.normal + 'quick ' +
+            self.terminal.red('brown') + ' fox ' +
+            self.terminal.underline('jumps'))  # +
+            #' over {t.green_on_white}the lazy{t.normal} dog'.format(
+            #    t=self.terminal))
+            # FIXME: can't yet handle .format insertion of Format objects into
+            # strings
+        text = Text(content)
+        expected = [
+            (self.terminal.bold + 'The ' + self.terminal.normal + 'quick ' +
+             self.terminal.red + 'brown' + self.terminal.normal + '  '),
+            ('fox ' + self.terminal.underline + 'jumps' +
+             self.terminal.normal + self.terminal.normal + '        '),
+            #+ ' over ' + self.terminal.green_on_white),
+            #('the lazy' + self.terminal.normal + ' dog' +
+            # self.terminal.normal + '     '),
+            '                 ',
+            '                 ']
+        actual = text._get_cropped_block(17, 4)
+        self.assertEqual(actual, expected)
+
 
 class TestContainerElements(TestCase):
     def setUp(self):
@@ -120,7 +146,7 @@ class TestContainerElements(TestCase):
         root.testing = True  # FIXME just whilst we're blocking with input()
         root.run()
         self.terminal.draw_block.assert_called_with(
-            ['....', '....', '....', '....'], 0, 0)
+            ['....', '....', '....', '....'], 0, 0, fill.default_format)
 
     def test_stack_limits(self):
         stack = Stack()
@@ -143,41 +169,43 @@ class TestContainerElements(TestCase):
 
     def test_stack(self):
         fill1 = Fill('1', name='1')
+        fill1.default_format = 'kinda oney'
         fill2 = Fill('2', name='2')
+        fill2.default_format = 'more like two'
         fill2.min_height = 2
         stack = Stack([fill1, fill2])
         stack.terminal = self.terminal
         stack.draw(5, 4)
         self.terminal.draw_block.assert_has_calls([
-            call(['11111'], 0, 0),
-            call(['22222', '22222'], 0, 1)])
+            call(['11111'], 0, 0, fill1.default_format),
+            call(['22222', '22222'], 0, 1, fill2.default_format)])
         self.terminal.draw_block.reset_mock()
         self.assertIsNone(stack.min_width)
         stack.draw(3, 2)
         self.terminal.draw_block.assert_has_calls([
-            call(['111'], 0, 0),
-            call(['222'], 0, 1)])
+            call(['111'], 0, 0, fill1.default_format),
+            call(['222'], 0, 1, fill2.default_format)])
         self.terminal.draw_block.reset_mock()
         stack.draw(4, 1)
         self.terminal.draw_block.assert_has_calls([
-            call(['1111'], 0, 0)])
+            call(['1111'], 0, 0, fill1.default_format)])
         self.terminal.draw_block.reset_mock()
         stack.valign = 'bottom'
         stack.draw(3, 2)
         self.terminal.draw_block.assert_has_calls([
-            call(['222', '222'], 0, 0)])
+            call(['222', '222'], 0, 0, fill2.default_format)])
         self.terminal.draw_block.reset_mock()
         fill3 = Fill('3', name='3')
         stack.add_element(fill3)
         stack.draw(5, 4)
         self.terminal.draw_block.assert_has_calls([
-            call(['33333'], 0, 3),
-            call(['22222', '22222'], 0, 1),
-            call(['11111'], 0, 0)])
+            call(['33333'], 0, 3, fill3.default_format),
+            call(['22222', '22222'], 0, 1, fill2.default_format),
+            call(['11111'], 0, 0, fill1.default_format)])
         self.terminal.draw_block.reset_mock()
         stack.remove_element(fill2)
         stack.draw(5, 4)
         self.terminal.draw_block.assert_has_calls([
-            call(['33333'], 0, 3),
-            call(['11111'], 0, 2)])
+            call(['33333'], 0, 3, fill3.default_format),
+            call(['11111'], 0, 2, fill1.default_format)])
         self.terminal.draw_block.reset_mock()
