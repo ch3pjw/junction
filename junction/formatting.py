@@ -117,14 +117,39 @@ class StringWithFormatting:
             return False
 
     def __add__(self, other):
-        if isinstance(other, (str, Format)):
-            return self.__class__(self._content + (other,))
+        if isinstance(other, Format):
+            new_content = self._content + (other,)
+        elif isinstance(other, str):
+            if isinstance(self._content[-1], Format):
+                new_content = self._content + (other,)
+            else:
+                # We want to keep runs of strings a long as possible, so make
+                # something like ['hello'] + 'world' into ['helloworld'] not
+                # ['hello', 'world']:
+                new_content = self._content[:-1] + (self._content[-1] + other,)
         else:
-            return self.__class__(self._content + other._content)
+            if not isinstance(self._content[-1], Format) and not isinstance(
+                    other._content[-1], Format):
+                # Similarly, we want to concat strings at each end of content
+                # when adding two StringWithFormatting objects:
+                new_content = (
+                    self._content[:-1] +
+                    (self._content[-1] + other._content[0],) +
+                    other._content[1:])
+            else:
+                new_content = self._content + other._content
+        return self.__class__(new_content)
 
     def __radd__(self, other):
-        if isinstance(other, (str, Format)):
-            return self.__class__((other,) + self._content)
+        if isinstance(other, Format):
+            new_content = (other,) + self._content
+        else:
+            if isinstance(self._content[0], Format):
+                new_content = (other,) + self._content
+            else:
+                # Again, make longer runs of strings:
+                new_content = (other + self._content[0],) + self._content[1:]
+        return self.__class__(new_content)
 
     def __iter__(self):
         for string in self._content:

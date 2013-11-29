@@ -150,7 +150,7 @@ class TestStringWithFormatting(TestCase):
         long_swf = Format('PrePrefixFormat') + long_swf
         self.assertIsInstance(long_swf, StringWithFormatting)
         self.assertEqual(long_swf._content, (
-            Format('PrePrefixFormat'), 'Prefix', 'Hello ', Format('hiding'),
+            Format('PrePrefixFormat'), 'PrefixHello ', Format('hiding'),
             'World!'))
         # String suffix
         long_swf = self.swf + 'Suffix'
@@ -159,13 +159,17 @@ class TestStringWithFormatting(TestCase):
         # Format suffix
         long_swf = long_swf + Format('SufSuffixFormat')
         self.assertEqual(long_swf._content, (
-            'Hello ', Format('hiding'), 'World!', 'Suffix',
+            'Hello ', Format('hiding'), 'World!Suffix',
             Format('SufSuffixFormat')))
         # Adding two StringWithFormatting objects
         long_swf = self.swf + self.swf
         self.assertEqual(long_swf._content, (
-            'Hello ', Format('hiding'), 'World!', 'Hello ', Format('hiding'),
+            'Hello ', Format('hiding'), 'World!Hello ', Format('hiding'),
             'World!'))
+        # Reverse-adding a str:
+        long_swf = 'fantastic' + self.swf
+        self.assertEqual(long_swf._content, (
+            'fantasticHello ', Format('hiding'), 'World!'))
 
     def test_get_item_index(self):
         self.assertEqual(self.swf[2], 'l')
