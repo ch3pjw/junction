@@ -33,7 +33,7 @@ class TestContainerElements(TestCase):
     def test_base_draw_and_update(self):
         element1 = DisplayElementForTest()
         element2 = DisplayElementForTest()
-        container = ContainerElementForTest([element1, element2])
+        container = ContainerElementForTest(element1, element2)
         with self.assertRaises(ValueError):
             container.update()
         container.draw(1, 2, 3, 4, 'bottom', 'right')
@@ -82,7 +82,7 @@ class TestContainerElements(TestCase):
         fill2 = Fill('2', name='2')
         fill2.default_format = 'more like two'
         fill2.min_height = 2
-        stack = Stack([fill1, fill2])
+        stack = Stack(fill1, fill2)
         stack.terminal = self.terminal
         stack.draw(5, 4)
         self.terminal.draw_block.assert_has_calls([
