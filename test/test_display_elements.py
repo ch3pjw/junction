@@ -1,7 +1,8 @@
+# coding=utf-8
 from unittest import TestCase
 
 from junction.terminal import Terminal
-from junction.display_elements import Fill, Text
+from junction.display_elements import Fill, Text, ProgressBar
 
 
 class TestDisplayElements(TestCase):
@@ -93,3 +94,41 @@ class TestDisplayElements(TestCase):
             '                 ']
         actual = text._get_cropped_block(17, 4)
         self.assertEqual(actual, expected)
+
+    def test_progress_bar(self):
+        progress_bar = ProgressBar()
+        self.assertEqual(progress_bar._get_block(3, 1), ['[ ]'])
+        self.assertEqual(progress_bar._get_block(2, 1), ['[ ]'])
+        self.assertEqual(progress_bar._get_block(3, 0), ['[ ]'])
+        progress_bar.fraction = 0.5
+        self.assertEqual(progress_bar.fraction, 0.5)
+        self.assertTrue(progress_bar.updated)
+        self.assertEqual(
+            progress_bar._get_block(10, 1), ['[====    ]'])
+        progress_bar.fraction = 0.45
+        self.assertEqual(
+            progress_bar._get_block(9, 1), ['[===-   ]'])
+        progress_bar.fraction = 1
+        self.assertEqual(progress_bar._get_block(9, 1), ['[=======]'])
+        progress_bar.fraction = 1.1
+        self.assertEqual(progress_bar.fraction, 1)
+        progress_bar.fraction = -0.1
+        self.assertEqual(progress_bar.fraction, 0)
+
+    def test_progress_bar_unicode(self):
+        progress_bar = ProgressBar(':*█:')
+        progress_bar.fraction = 0.5
+        self.assertEqual(progress_bar._get_block(8, 1), [':███***:'])
+
+    def test_custom_progress_bar(self):
+        progress_bar = ProgressBar('()')
+        progress_bar.fraction = 0.5
+        self.assertEqual(progress_bar._get_block(8, 1), ['[===   ]'])
+        progress_bar = ProgressBar('(_-)')
+        progress_bar.fraction = 0.5
+        self.assertEqual(progress_bar._get_block(8, 1), ['(---___)'])
+        progress_bar = ProgressBar('{ `\'"}')
+        progress_bar.fraction = 0.45
+        self.assertEqual(progress_bar._get_block(9, 1), ['{"""`   }'])
+        progress_bar.fraction = 0.49
+        self.assertEqual(progress_bar._get_block(9, 1), ['{"""\'   }'])

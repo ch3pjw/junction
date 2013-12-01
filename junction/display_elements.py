@@ -93,3 +93,41 @@ class Text(ABCDisplayElement):
         if any(isinstance(line, StringWithFormatting) for line in lines):
             lines[-1] += self.terminal.normal
         return lines
+
+
+class ProgressBar(ABCDisplayElement):
+    min_width = 3
+    min_height = 1
+    max_height = 1
+
+    def __init__(self, chars=None):
+        if not chars or len(chars) < 4:
+            chars = '[ -=]'
+        self._start_cap = chars[0]
+        self._end_cap = chars[-1]
+        self._bg_char = chars[1]
+        self._progress_chars = chars[2:-1]
+        self._fraction = 0
+
+    @property
+    def fraction(self):
+        return self._fraction
+
+    @fraction.setter
+    def fraction(self, value):
+        self._fraction = clamp(value, 0, 1)
+        self.updated = True
+
+    def _get_block(self, width, height):
+        width = max(width, self.min_width) - 2
+        chars = [self._bg_char] * width
+        filled = self._fraction * width
+        over = filled - int(filled)
+        filled = int(filled)
+        chars[:filled] = self._progress_chars[-1] * filled
+        if over:
+            final_char = self._progress_chars[
+                int(over * len(self._progress_chars))]
+            chars[filled] = final_char
+        return ['{}{}{}'.format(
+            self._start_cap, ''.join(chars), self._end_cap)]
