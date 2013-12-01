@@ -156,3 +156,23 @@ class Stack(ABCContainerElement):
                     height -= elem_height
                 else:
                     break
+
+
+class Zebra(Stack):
+    def __init__(self, *args, odd_format=None, even_format=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.odd_format = odd_format
+        self.even_format = even_format
+
+    @property
+    def _formats(self):
+        return [
+            self.even_format or self.default_format,
+            self.odd_format or self.default_format]
+
+    def _get_elements_sizes_and_positions(self, width, height, x, y):
+        parent = super()._get_elements_sizes_and_positions(
+            width, height, x, y)
+        for i, (element, width, height, x, y) in enumerate(parent):
+            element.default_format = self._formats[i % 2]
+            yield element, width, height, x, y
