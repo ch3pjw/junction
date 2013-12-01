@@ -5,11 +5,10 @@ from .terminal import get_terminal
 
 
 class ABCContainerElement(ABCUIElement):
-    def __init__(self, elements=None, *args, **kwargs):
+    def __init__(self, *elements, **kwargs):
         self._content = []
         self._active_element = None
-        super().__init__(*args, **kwargs)
-        elements = elements or []
+        super().__init__(**kwargs)
         for element in elements:
             self.add_element(element)
 
