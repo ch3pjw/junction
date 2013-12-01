@@ -79,9 +79,49 @@ class Root:
                 input()
 
 
+class Box(ABCContainerElement):
+    min_width = 2
+    min_height = 2
+
+    def __init__(self, content, chars=None, **kwargs):
+        super().__init__(content, **kwargs)
+        if not chars or len(chars) != 8:
+            chars = '+-+|+-+|'
+        self._top_left = chars[0]
+        self._top = chars[1]
+        self._top_right = chars[2]
+        self._right = chars[3]
+        self._bottom_right = chars[4]
+        self._bottom = chars[5]
+        self._bottom_left = chars[6]
+        self._left = chars[7]
+
+    @property
+    def max_width(self):
+        return self._active_element.max_width + 2
+
+    @property
+    def max_height(self):
+        return self._active_element.max_height + 2
+
+    def _get_elements_sizes_and_positions(self, width, height, x, y):
+        yield self._active_element, width - 2, height - 2, x + 1, y + 1
+
+    def _draw(self, width, height, x=0, y=0, *args, **kwargs):
+        top = [self._top_left + self._top * (width - 2) + self._top_right]
+        left = [self._left] * (height - 2)
+        bottom = [
+            self._bottom_left + self._bottom * (width - 2) +
+            self._bottom_right]
+        right = [self._right] * (height - 2)
+        self.terminal.draw_block(top, x, y, self.default_format)
+        self.terminal.draw_block(left, x, y + 1, self.default_format)
+        self.terminal.draw_block(bottom, x, y + height, self.default_format)
+        self.terminal.draw_block(right, x + width, y + 1, self.default_format)
+        super()._draw(width, height, x, y, *args, **kwargs)
+
+
 class Stack(ABCContainerElement):
-    max_width = None
-    max_height = None
     _possible_valigns = 'top', 'bottom'
 
     @property
