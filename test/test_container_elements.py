@@ -1,9 +1,10 @@
+# coding=utf-8
 from unittest import TestCase
 from mock import Mock, MagicMock, call
 
 from junction.terminal import Terminal
 from junction.display_elements import Fill, ABCDisplayElement
-from junction.container_elements import ABCContainerElement, Root, Stack
+from junction.container_elements import ABCContainerElement, Root, Box, Stack
 
 
 class DisplayElementForTest(ABCDisplayElement):
@@ -56,6 +57,32 @@ class TestContainerElements(TestCase):
         root.run()
         self.terminal.draw_block.assert_called_with(
             ['....', '....', '....', '....'], 0, 0, fill.default_format)
+
+    def test_box(self):
+        fill = Fill()
+        box = Box(fill)
+        box.terminal = self.terminal
+        box.draw(4, 4)
+        self.terminal.draw_block.assert_has_calls([
+            call(['..', '..'], 1, 1, box.default_format),
+            call(['+--+'], 0, 0, box.default_format),
+            call(['|', '|'], 0, 1, box.default_format),
+            call(['|', '|'], 3, 1, box.default_format),
+            call(['+--+'], 0, 3, box.default_format)],
+            any_order=True)
+        self.terminal.draw_block.reset_mock()
+        box = Box(fill, chars='╓─┐│┘─╙║')
+        box.terminal = self.terminal
+        box.draw(3, 3)
+        self.terminal.draw_block.assert_has_calls([
+            call(['.'], 1, 1, box.default_format),
+            call(['╓─┐'], 0, 0, box.default_format),
+            call(['║'], 0, 1, box.default_format),
+            call(['│'], 2, 1, box.default_format),
+            call(['╙─┘'], 0, 2, box.default_format)],
+            any_order=True)
+        box = Box(fill, chars='[]')
+        self.assertEqual(box.chars, '+-+|+-+|')
 
     def test_stack_limits(self):
         stack = Stack()

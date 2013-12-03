@@ -84,6 +84,24 @@ class Box(ABCContainerElement):
 
     def __init__(self, content, chars=None, **kwargs):
         super().__init__(content, **kwargs)
+        self._top_left = None
+        self._top = None
+        self._top_right = None
+        self._right = None
+        self._bottom_right = None
+        self._bottom = None
+        self._bottom_left = None
+        self._left = None
+        self.chars = chars
+
+    @property
+    def chars(self):
+        return ''.join([
+            self._top_left, self._top, self._top_right, self._right,
+            self._bottom_right, self._bottom, self._bottom_left, self._left])
+
+    @chars.setter
+    def chars(self, chars):
         if not chars or len(chars) != 8:
             chars = '+-+|+-+|'
         self._top_left = chars[0]
@@ -94,6 +112,7 @@ class Box(ABCContainerElement):
         self._bottom = chars[5]
         self._bottom_left = chars[6]
         self._left = chars[7]
+        self.updated = True
 
     @property
     def max_width(self):
@@ -107,6 +126,7 @@ class Box(ABCContainerElement):
         yield self._active_element, width - 2, height - 2, x + 1, y + 1
 
     def _draw(self, width, height, x=0, y=0, *args, **kwargs):
+        super()._draw(width, height, x, y, *args, **kwargs)
         top = [self._top_left + self._top * (width - 2) + self._top_right]
         left = [self._left] * (height - 2)
         bottom = [
@@ -115,9 +135,10 @@ class Box(ABCContainerElement):
         right = [self._right] * (height - 2)
         self.terminal.draw_block(top, x, y, self.default_format)
         self.terminal.draw_block(left, x, y + 1, self.default_format)
-        self.terminal.draw_block(bottom, x, y + height, self.default_format)
-        self.terminal.draw_block(right, x + width, y + 1, self.default_format)
-        super()._draw(width, height, x, y, *args, **kwargs)
+        self.terminal.draw_block(
+            bottom, x, y + height - 1, self.default_format)
+        self.terminal.draw_block(
+            right, x + width - 1, y + 1, self.default_format)
 
 
 class Stack(ABCContainerElement):
