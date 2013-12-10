@@ -167,8 +167,8 @@ class Zebra(Stack):
     @property
     def _formats(self):
         return [
-            self.even_format or self.default_format,
-            self.odd_format or self.default_format]
+            self.even_format or self.default_format or self.terminal._normal,
+            self.odd_format or self.default_format or self.terminal._normal]
 
     def _get_elements_sizes_and_positions(self, width, height, x, y):
         parent = super()._get_elements_sizes_and_positions(
