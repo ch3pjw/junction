@@ -4,7 +4,8 @@ from mock import Mock, MagicMock, call
 
 from junction.terminal import Terminal
 from junction.display_elements import Fill, ABCDisplayElement
-from junction.container_elements import ABCContainerElement, Root, Box, Stack
+from junction.container_elements import (
+    ABCContainerElement, Root, Box, Stack, Zebra)
 
 
 class DisplayElementForTest(ABCDisplayElement):
@@ -145,3 +146,37 @@ class TestContainerElements(TestCase):
             call(['33333'], 0, 3, fill3.default_format),
             call(['11111'], 0, 2, fill1.default_format)])
         self.terminal.draw_block.reset_mock()
+
+    def test_zebra(self):
+        fill1 = Fill()
+        fill2 = Fill(',')
+        fill2.min_height = 2
+        zebra = Zebra(
+            fill1, fill1, fill1, fill2, fill1, even_format='hello',
+            odd_format='world')
+        zebra.terminal = self.terminal
+        zebra.draw(3, 10)
+        self.terminal.draw_block.assert_has_calls([
+            call(['...'], 0, 0, 'hello'),
+            call(['...'], 0, 1, 'world'),
+            call(['...'], 0, 2, 'hello'),
+            call([',,,', ',,,'], 0, 3, 'world'),
+            call(['...'], 0, 5, 'hello')])
+        self.terminal.draw_block.reset_mock()
+        zebra.even_format = None
+        zebra.draw(3, 10)
+        self.terminal.draw_block.assert_has_calls([
+            call(['...'], 0, 0, self.terminal._normal),
+            call(['...'], 0, 1, 'world'),
+            call(['...'], 0, 2, self.terminal._normal),
+            call([',,,', ',,,'], 0, 3, 'world'),
+            call(['...'], 0, 5, self.terminal._normal)])
+        self.terminal.draw_block.reset_mock()
+        zebra.default_format = 'norm'
+        zebra.draw(3, 10)
+        self.terminal.draw_block.assert_has_calls([
+            call(['...'], 0, 0, 'norm'),
+            call(['...'], 0, 1, 'world'),
+            call(['...'], 0, 2, 'norm'),
+            call([',,,', ',,,'], 0, 3, 'world'),
+            call(['...'], 0, 5, 'norm')])
