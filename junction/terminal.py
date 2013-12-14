@@ -1,8 +1,10 @@
 import blessings
 import termios
+import tty
 import signal
 import os
 from functools import wraps
+from contextlib import contextmanager
 
 from .formatting import Format, StringWithFormatting
 
@@ -92,6 +94,23 @@ class Terminal(blessings.Terminal):
                 self.stream.write(self.hide_cursor)
         signal.signal(signal.SIGCONT, restore_on_sigcont)
         os.kill(os.getpid(), signal.SIGTSTP)
+
+    @contextmanager
+    def unbuffered_input(self):
+        '''Sets cbreak on the current tty so that input from the user isn't
+        parcelled up and delivered with each press of return, but delivered on
+        each keystroke.
+        '''
+        if self.is_a_tty:
+            orig_tty_attrs = termios.tcgetattr(self.stream)
+            tty.setcbreak(self.stream)
+            try:
+                yield
+            finally:
+                termios.tcsetattr(
+                    self.stream, termios.TCSADRAIN, orig_tty_attrs)
+        else:
+            yield
 
     def draw_block(self, block, x, y, normal=None):
         if normal is not None:

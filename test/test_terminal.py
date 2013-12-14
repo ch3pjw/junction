@@ -66,6 +66,27 @@ class TestTerminal(TestCase):
         term._does_styling = False
         self.assertIsInstance(term.blue, blessings.NullCallableString)
 
+    @patch('junction.terminal.termios', autospec=True)
+    @patch('junction.terminal.tty.setcbreak', autospec=True)
+    def test_unbuffered_input(self, mock_setcbreak, mock_termios):
+        mock_termios.tcgetattr.return_value = 'Wobble'
+        term = Terminal(force_styling=True)
+        term.is_a_tty = True
+        mock_termios.reset_mock()
+        context_manager = term.unbuffered_input()
+        context_manager.__enter__()
+        mock_termios.tcgetattr.assert_called_once_with(term.stream)
+        mock_setcbreak.assert_called_once_with(term.stream)
+        self.assertEqual(mock_termios.tcsetattr.call_count, 0)
+        context_manager.__exit__(None, None, None)  # exc_type, exc_value, tb
+        mock_termios.tcsetattr.assert_called_once_with(
+            term.stream, mock_termios.TCSADRAIN, 'Wobble')
+        mock_termios.reset_mock()
+        term.is_a_tty = False
+        with term.unbuffered_input():
+            self.assertEqual(mock_termios.tcgetattr.call_count, 0)
+        self.assertEqual(mock_termios.tcsetattr.call_count, 0)
+
     def test_draw_block(self):
         self.maxDiff = 0  # protect from difficult terminal output on failure
         blessings_term = blessings.Terminal(force_styling=True)
