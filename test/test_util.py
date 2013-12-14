@@ -1,6 +1,8 @@
+import asyncio
 from unittest import TestCase
 
-from junction.util import clamp, weighted_round_robin, crop_or_expand
+from junction.util import (
+    clamp, weighted_round_robin, crop_or_expand, LoopingCall)
 
 
 class TestUtil(TestCase):
@@ -71,3 +73,22 @@ class TestUtil(TestCase):
         self.assertEqual(
             crop_or_expand('y', 8, scheme='middle'),
             '    y   ')
+
+    def test_looping_call(self):
+        result = []
+        future = asyncio.Future()
+        def loopable(n):
+            for i in range(n):
+                yield result.append(i)
+            looping_call.stop()
+            future.set_result('done')
+            yield result.append(n)
+            # The following should never get called, seeing as we stopped the
+            # looping call...
+            yield result.append(n + 1)
+        func = loopable(3).__next__
+        looping_call = LoopingCall(func)
+        loop = asyncio.get_event_loop()
+        looping_call.start(0.01, loop=loop)
+        loop.run_until_complete(future)
+        self.assertEqual(result, [0, 1, 2, 3])

@@ -1,3 +1,4 @@
+import asyncio
 from itertools import cycle
 
 
@@ -60,3 +61,27 @@ def weighted_round_robin(iterable):
                 del still_to_process[i]
         assigned_weight += 1
     return cycle(cyclable_list)
+
+
+class LoopingCall:
+    def __init__(self, func, *args, **kwargs):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        self.interval = None
+        self.loop = None
+        self.running = False
+
+    def start(self, interval, loop=None):
+        self.interval = interval
+        self.loop = loop or asyncio.get_event_loop()
+        self.running = True
+        self._execute()
+
+    def _execute(self):
+        if self.running:
+            self.func(*self.args, **self.kwargs)
+            self.loop.call_later(self.interval, self._execute)
+
+    def stop(self):
+        self.running = False
