@@ -6,8 +6,8 @@ import signal
 import os
 from io import StringIO
 
-from junction import Terminal
-from junction.terminal import get_terminal
+from junction import Terminal, get_terminal
+from junction.terminal import Keyboard
 
 
 class TestTerminal(TestCase):
@@ -102,3 +102,8 @@ class TestTerminal(TestCase):
         self.assertIsInstance(terminal, Terminal)
         # Same terminal instance every time:
         self.assertIs(get_terminal(), terminal)
+
+    def test_keyboard(self):
+        keyboard = Keyboard()
+        self.assertEqual(keyboard['\x1b[7~'], 'home')
+        self.assertEqual(keyboard['\x1btosh'], '\x1btosh')
