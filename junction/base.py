@@ -102,3 +102,7 @@ class ABCUIElement(metaclass=ABCMeta):
     @abstractmethod
     def _update(self):
         pass
+
+    #@abstractmethod
+    def handle_input(self, data):
+        print('woo', data)

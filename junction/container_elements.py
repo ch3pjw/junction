@@ -1,3 +1,4 @@
+import asyncio
 from abc import abstractmethod
 
 from .base import ABCUIElement
@@ -56,7 +57,7 @@ class ABCContainerElement(ABCUIElement):
 
 
 class Root:
-    def __init__(self, element, terminal=None, *args, **kwargs):
+    def __init__(self, element, *args, terminal=None, loop=None, **kwargs):
         '''Represents the root element of a tree of UI elements. We are
         associated with a Terminal object, so we're in the unique position of
         knowing our own width and height constraints, and are responsible for
@@ -67,15 +68,26 @@ class Root:
         '''
         self.element = element
         self.terminal = terminal or get_terminal()
+        self.loop = loop or asyncio.get_event_loop()
         self.element.terminal = self.terminal
         self.testing = False
 
     def run(self):
-        with self.terminal.fullscreen():
-            self.element.draw(self.terminal.width, self.terminal.height)
+        with self.terminal.fullscreen(), self.terminal.hidden_cursor(), (
+                self.terminal.unbuffered_input()), (
+                self.terminal.nonblocking_input()):
+            def read_stdin():
+                data = self.terminal.infile.read()
+                self.element.handle_input(data)
+            self.loop.add_reader(self.terminal.infile, read_stdin)
+            self.draw()
             if not self.testing:
                 # FIXME: Blocking for now just to see output
-                input()
+                self.loop.run_forever()
+
+    def draw(self):
+        self.element.draw(self.terminal.width, self.terminal.height)
+        self.terminal.stream.flush()
 
 
 class Box(ABCContainerElement):
