@@ -42,7 +42,7 @@ class TestTerminal(TestCase):
         term._is_fullscreen = True
         term._has_hidden_cursor = True
         term.is_a_tty = True
-        term.handle_sigtstp(None, None)
+        term._handle_sigtstp(None, None)
         mock_termios.tcgetattr.assert_called_once_with(fake_tty)
         self.assertTrue(bool(fake_tty.getvalue()))
         self.assertIn(term.exit_fullscreen, fake_tty.getvalue())

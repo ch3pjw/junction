@@ -24,9 +24,11 @@ def _override_sugar(func):
 
 
 class Terminal(blessings.Terminal):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, handle_signals=True, **kwargs):
         super().__init__(*args, **kwargs)
         self._normal = super()._resolve_formatter('normal')
+        if handle_signals:
+            signal.signal(signal.SIGTSTP, self._handle_sigtstp)
         # We track these to make SIGTSTP restore the terminal correctly:
         self._is_fullscreen = False
         self._has_hidden_cursor = False
@@ -63,7 +65,7 @@ class Terminal(blessings.Terminal):
     def normal_cursor(self):
         self._has_hidden_cursor = False
 
-    def handle_sigtstp(self, sig_num, stack_frame):
+    def _handle_sigtstp(self, sig_num, stack_frame):
         # Store current state:
         if self.is_a_tty:
             cur_tty_attrs = termios.tcgetattr(self.stream)
