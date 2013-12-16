@@ -3,6 +3,8 @@ import termios
 import tty
 import signal
 import os
+import sys
+import fcntl
 from functools import wraps
 from contextlib import contextmanager
 
@@ -24,9 +26,9 @@ def _override_sugar(func):
 
 
 class Terminal(blessings.Terminal):
-    def __init__(self, *args, handle_signals=True, **kwargs):
+    def __init__(self, *args, infile=None, handle_signals=True, **kwargs):
         super().__init__(*args, **kwargs)
-        self._normal = super()._resolve_formatter('normal')
+        self.infile = infile or sys.stdin
         if handle_signals:
             signal.signal(signal.SIGTSTP, self._handle_sigtstp)
         if self.is_a_tty:
@@ -36,6 +38,7 @@ class Terminal(blessings.Terminal):
         # We track these to make SIGTSTP restore the terminal correctly:
         self._is_fullscreen = False
         self._has_hidden_cursor = False
+        self._normal = super()._resolve_formatter('normal')
         self._resolved_sugar_cache = {}
 
     def __getattr__(self, attr):
@@ -117,6 +120,16 @@ class Terminal(blessings.Terminal):
                     self.stream, termios.TCSADRAIN, orig_tty_attrs)
         else:
             yield
+
+    @contextmanager
+    def nonblocking_input(self):
+        if hasattr(self.infile, 'fileno'):
+            # Use fcntl to set stdin to non-blocking. WARNING - this is not
+            # particularly portable!
+            flags = fcntl.fcntl(self.infile, fcntl.F_GETFL)
+            fcntl.fcntl(self.infile, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+            yield
+            fcntl.fcntl(self.infile, fcntl.F_SETFL, flags)
 
     def draw_block(self, block, x, y, normal=None):
         if normal is not None:
