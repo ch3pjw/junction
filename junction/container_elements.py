@@ -1,5 +1,7 @@
 import asyncio
+import signal
 from abc import abstractmethod
+from contextlib import contextmanager
 
 from .base import ABCUIElement
 from .terminal import get_terminal
@@ -72,10 +74,22 @@ class Root:
         self.element.terminal = self.terminal
         self.testing = False
 
+    @contextmanager
+    def _handle_screen_resize(self):
+        signal.signal(signal.SIGWINCH, self._on_screen_resize)
+        try:
+            yield
+        finally:
+            signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+
+    def _on_screen_resize(self, sig_num, stack_frame):
+        self.draw()
+
     def run(self):
         with self.terminal.fullscreen(), self.terminal.hidden_cursor(), (
                 self.terminal.unbuffered_input()), (
-                self.terminal.nonblocking_input()):
+                self.terminal.nonblocking_input()), (
+                self._handle_screen_resize()):
             def read_stdin():
                 data = self.terminal.infile.read()
                 self.element.handle_input(data)
