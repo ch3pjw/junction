@@ -128,8 +128,12 @@ class Terminal(blessings.Terminal):
             # particularly portable!
             flags = fcntl.fcntl(self.infile, fcntl.F_GETFL)
             fcntl.fcntl(self.infile, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+            try:
+                yield
+            finally:
+                fcntl.fcntl(self.infile, fcntl.F_SETFL, flags)
+        else:
             yield
-            fcntl.fcntl(self.infile, fcntl.F_SETFL, flags)
 
     def draw_block(self, block, x, y, normal=None):
         if normal is not None:
