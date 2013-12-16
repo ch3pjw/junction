@@ -95,6 +95,20 @@ class Text(ABCDisplayElement):
         return lines
 
 
+class Input(Text):
+    # TODO: add placeholder text stuff
+
+    def handle_input(self, data):
+        if len(data) == 1:
+            self.content += data
+        elif data == 'space':
+            self.content += ' '
+        elif data == 'backspace':
+            self.content = self.content[:-1]
+        # FIXME: this is a temporary hack to try proof of concept
+        self.root.draw()
+
+
 class ProgressBar(ABCDisplayElement):
     min_width = 3
     min_height = 1

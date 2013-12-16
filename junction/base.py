@@ -30,6 +30,7 @@ class ABCUIElement(metaclass=ABCMeta):
         self.updated = True
         self._previous_geometry = None
         self.default_format = None
+        self.root = None
 
     def __repr__(self):
         if self.name:

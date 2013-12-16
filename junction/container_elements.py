@@ -4,7 +4,7 @@ from abc import abstractmethod
 from contextlib import contextmanager
 
 from .base import ABCUIElement
-from .terminal import get_terminal
+from .terminal import get_terminal, Keyboard
 
 
 class ABCContainerElement(ABCUIElement):
@@ -38,9 +38,12 @@ class ABCContainerElement(ABCUIElement):
         self._content.append(element)
         self._active_element = element
         element.terminal = self.terminal
+        element.root = self.root
 
     def remove_element(self, element):
         self._content.remove(element)
+        if element is self._active_element:
+            self._active_element = None
 
     def _draw(self, width, height, x=0, y=0, x_crop=None, y_crop=None):
         x_crop = x_crop or self._halign
@@ -69,9 +72,11 @@ class Root:
             drawn.
         '''
         self.element = element
+        element.root = self
         self.terminal = terminal or get_terminal()
         self.loop = loop or asyncio.get_event_loop()
         self.element.terminal = self.terminal
+        self.keyboard = Keyboard()
         self.testing = False
 
     @contextmanager
@@ -92,7 +97,7 @@ class Root:
                 self._handle_screen_resize()):
             def read_stdin():
                 data = self.terminal.infile.read()
-                self.element.handle_input(data)
+                self.element.handle_input(self.keyboard[data])
             self.loop.add_reader(self.terminal.infile, read_stdin)
             self.draw()
             if not self.testing:
