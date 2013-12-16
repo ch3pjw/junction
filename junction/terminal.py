@@ -29,6 +29,10 @@ class Terminal(blessings.Terminal):
         self._normal = super()._resolve_formatter('normal')
         if handle_signals:
             signal.signal(signal.SIGTSTP, self._handle_sigtstp)
+        if self.is_a_tty:
+            self._orig_tty_attrs = termios.tcgetattr(self.stream)
+        else:
+            self._orig_tty_attrs = None
         # We track these to make SIGTSTP restore the terminal correctly:
         self._is_fullscreen = False
         self._has_hidden_cursor = False
