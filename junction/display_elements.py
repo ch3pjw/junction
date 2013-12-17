@@ -113,11 +113,17 @@ class Text(ABCDisplayElement):
 
 
 class LineBuffer:
+    # Yes, the irony of re-implementing a bunch of stuff we've gone out of way
+    # to turn off in the terminal is not lost on me ;-)
     def __init__(self):
         self.content = ''
+        self.cursor_position = 0
 
     def __bool__(self):
         return bool(self.content)
+
+    def __len__(self):
+        return len(self.content)
 
     def __str__(self):
         return self.content
@@ -127,11 +133,43 @@ class LineBuffer:
 
     def handle_input(self, data):
         if len(data) == 1:
-            self.content += data
+            self._insert_char(data)
         elif data == 'space':
-            self.content += ' '
+            self._insert_char(' ')
         elif data == 'backspace':
+            self._backspace_char()
+        elif data == 'delete':
+            self._delete_char(self.cursor_position)
+        elif data == 'left':
+            self._move_cursor(-1)
+        elif data == 'right':
+            self._move_cursor(1)
+        elif data == 'home':
+            self.cursor_position = 0
+        elif data == 'end':
+            self.cursor_position = len(self.content)
+
+    def _insert_char(self, char):
+        pos = self.cursor_position
+        if pos == len(self.content):
+            self.content += char
+        else:
+            self.content = self.content[:pos] + char + self.content[pos:]
+        self.cursor_position += 1
+
+    def _backspace_char(self):
+        if self.cursor_position == len(self.content):
             self.content = self.content[:-1]
+        else:
+            self._delete_char(self.cursor_position - 1)
+        self.cursor_position -= 1
+
+    def _delete_char(self, pos):
+        self.content = self.content[:pos] + self.content[pos + 1:]
+
+    def _move_cursor(self, delta):
+        self.cursor_position = clamp(
+            self.cursor_position + delta, min_=0, max_=len(self))
 
 
 class Input(Text):
