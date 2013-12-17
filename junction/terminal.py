@@ -72,6 +72,14 @@ class Terminal(blessings.Terminal):
     def normal_cursor(self):
         self._has_hidden_cursor = False
 
+    @property
+    def color(self):
+        return Format(super().color, name='color')
+
+    @property
+    def on_color(self):
+        return Format(super().on_color, name='on_color')
+
     def _handle_sigtstp(self, sig_num, stack_frame):
         # Store current state:
         if self.is_a_tty:
