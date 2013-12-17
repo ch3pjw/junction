@@ -177,8 +177,8 @@ class Keyboard:
 
             '\x1b[A': 'up',
             '\x1b[B': 'down',
-            '\x1b[C': 'left',
-            '\x1b[D': 'right',
+            '\x1b[C': 'right',
+            '\x1b[D': 'left',
             '\x1b[E': 'keypad5',
             '\x1b[F': 'end',
             '\x1b[G': 'keypad5',
