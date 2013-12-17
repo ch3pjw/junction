@@ -83,10 +83,27 @@ class Fill(ABCDisplayElement):
         return [self.char * width] * height
 
 
-class Text(ABCDisplayElement):
+class Label(ABCDisplayElement):
     def __init__(self, content, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.content = content
+
+    def _get_block(self, width, height):
+        return [self.content]
+
+
+class Text(ABCDisplayElement):
+    def __init__(self, content, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._content = content
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = value
 
     def _get_block(self, width, height):
         lines = wrap(self.content, width)
@@ -95,8 +112,18 @@ class Text(ABCDisplayElement):
         return lines
 
 
-class Input(Text):
-    # TODO: add placeholder text stuff
+class LineBuffer:
+    def __init__(self):
+        self.content = ''
+
+    def __bool__(self):
+        return bool(self.content)
+
+    def __str__(self):
+        return self.content
+
+    def clear(self):
+        self.content = ''
 
     def handle_input(self, data):
         if len(data) == 1:
@@ -105,8 +132,48 @@ class Input(Text):
             self.content += ' '
         elif data == 'backspace':
             self.content = self.content[:-1]
+
+
+class Input(Text):
+    # I'm not sure I'm liking the contstraints that the interrelationship of
+    # Text and Input imposes...
+    def __init__(self, placeholder_text, *args, **kwargs):
+        super().__init__(content=LineBuffer(), *args, **kwargs)
+        self.placeholder_text = placeholder_text
+
+    @property
+    def content(self):
+        if self._content:
+            return str(self._content)
+        else:
+            return self.placeholder_text
+
+    @content.setter
+    def content(self, value):
+        self._content.content = value
+
+    def handle_input(self, data):
+        self._content.handle_input(data)
         # FIXME: this is a temporary hack to try proof of concept
         self.root.draw()
+
+
+class LineInput(ABCDisplayElement):
+    def __init__(self, placeholder_text, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.placeholder_text = placeholder_text
+        self.line_buffer = LineBuffer()
+
+    def handle_input(self, data):
+        self.line_buffer.handle_input(data)
+        # FIXME: this is a temporary hack to try proof of concept
+        self.root.draw()
+
+    def _get_block(self, width, height):
+        if self.line_buffer:
+            return [str(self.line_buffer)]
+        else:
+            return [self.placeholder_text]
 
 
 class ProgressBar(ABCDisplayElement):
