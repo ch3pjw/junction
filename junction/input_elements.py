@@ -48,6 +48,8 @@ class LineBuffer:
         self.cursor_position += 1
 
     def _backspace_char(self):
+        if self.cursor_position == 0:
+            return
         if self.cursor_position == len(self.content):
             self.content = self.content[:-1]
         else:
