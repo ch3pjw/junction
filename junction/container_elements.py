@@ -14,6 +14,7 @@ class ABCContainerElement(ABCUIElement):
         super().__init__(**kwargs)
         for element in elements:
             self.add_element(element)
+        self._updated = True
 
     def __iter__(self):
         return iter(self._content)
@@ -27,6 +28,14 @@ class ABCContainerElement(ABCUIElement):
         self._terminal = terminal
         for element in self:
             element.terminal = terminal
+
+    @property
+    def updated(self):
+        return self._updated or any(element.updated for element in self)
+
+    @updated.setter
+    def updated(self, value):
+        self._updated = value
 
     @abstractmethod
     def _get_elements_sizes_and_positions(self, width, height, x, y):
@@ -55,10 +64,7 @@ class ABCContainerElement(ABCUIElement):
 
     def _update(self):
         for element in self:
-            print('here', element)
-            if element.updated:
-                print('there', element.updated)
-                element.update()
+            element.update()
 
 
 class Root:
@@ -106,6 +112,10 @@ class Root:
 
     def draw(self):
         self.element.draw(self.terminal.width, self.terminal.height)
+        self.terminal.stream.flush()
+
+    def update(self):
+        self.element.update()
         self.terminal.stream.flush()
 
 

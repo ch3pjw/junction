@@ -97,8 +97,9 @@ class ABCUIElement(metaclass=ABCMeta):
         if self._previous_geometry is None:
             raise ValueError("draw() must be called on {!r} before it can be "
                              "updated".format(self))
-        self._update()
-        self.updated = False
+        if self.updated:
+            self._update()
+            self.updated = False
 
     @abstractmethod
     def _update(self):
