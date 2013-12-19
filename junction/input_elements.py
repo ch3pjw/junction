@@ -1,5 +1,6 @@
 from .util import clamp
 from .display_elements import ABCDisplayElement, Text
+from .terminal import get_terminal
 
 
 class LineBuffer:
@@ -17,6 +18,18 @@ class LineBuffer:
 
     def __str__(self):
         return self.content
+
+    def draw(self):
+        # FIXME: Might want to reconsider how we do formatting so that the
+        # cursor style doesn't end up being hard-coded here...
+        terminal = get_terminal()
+        if self.cursor_position == len(self.content):
+            return self.content + terminal.reverse(' ')
+        else:
+            return (
+                self.content[:self.cursor_position] +
+                terminal.reverse(self.content[self.cursor_position]) +
+                self.content[self.cursor_position + 1:])
 
     def clear(self):
         self.content = ''
@@ -101,6 +114,6 @@ class LineInput(ABCDisplayElement):
 
     def _get_block(self, width, height):
         if self.line_buffer:
-            return [str(self.line_buffer)]
+            return [self.line_buffer.draw()]
         else:
             return [self.placeholder_text]
