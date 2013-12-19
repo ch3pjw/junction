@@ -2,6 +2,7 @@ from unittest import TestCase
 from mock import Mock
 
 from junction.input_elements import LineBuffer, LineInput
+from junction.terminal import Terminal
 
 
 class TestInputElements(TestCase):
@@ -33,6 +34,7 @@ class TestInputElements(TestCase):
         self.assertEqual(str(self.line_buffer), expected_result)
 
     def test_line_input(self):
+        terminal = Terminal(force_styling=True)
         line_input = LineInput('placeholder text')
         line_input.root = Mock()
         block = line_input._get_block(0, 0)
@@ -40,4 +42,5 @@ class TestInputElements(TestCase):
         for char in 'some important input':
             line_input.handle_input(char)
         block = line_input._get_block(0, 0)
-        self.assertEqual(block, ['some important input'])
+        self.assertEqual(
+            block, ['some important input' + terminal.reverse(' ')])
