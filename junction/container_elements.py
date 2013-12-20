@@ -1,7 +1,10 @@
+import asyncio
+import signal
 from abc import abstractmethod
+from contextlib import contextmanager
 
 from .base import ABCUIElement
-from .terminal import get_terminal
+from .terminal import get_terminal, Keyboard
 
 
 class ABCContainerElement(ABCUIElement):
@@ -11,6 +14,7 @@ class ABCContainerElement(ABCUIElement):
         super().__init__(**kwargs)
         for element in elements:
             self.add_element(element)
+        self._updated = True
 
     def __iter__(self):
         return iter(self._content)
@@ -25,6 +29,14 @@ class ABCContainerElement(ABCUIElement):
         for element in self:
             element.terminal = terminal
 
+    @property
+    def updated(self):
+        return self._updated or any(element.updated for element in self)
+
+    @updated.setter
+    def updated(self, value):
+        self._updated = value
+
     @abstractmethod
     def _get_elements_sizes_and_positions(self, width, height, x, y):
         '''Returns an interable containing each element with its corresponding
@@ -35,9 +47,12 @@ class ABCContainerElement(ABCUIElement):
         self._content.append(element)
         self._active_element = element
         element.terminal = self.terminal
+        element.root = self.root
 
     def remove_element(self, element):
         self._content.remove(element)
+        if element is self._active_element:
+            self._active_element = None
 
     def _draw(self, width, height, x=0, y=0, x_crop=None, y_crop=None):
         x_crop = x_crop or self._halign
@@ -49,14 +64,11 @@ class ABCContainerElement(ABCUIElement):
 
     def _update(self):
         for element in self:
-            print('here', element)
-            if element.updated:
-                print('there', element.updated)
-                element.update()
+            element.update()
 
 
 class Root:
-    def __init__(self, element, terminal=None, *args, **kwargs):
+    def __init__(self, element, *args, terminal=None, loop=None, **kwargs):
         '''Represents the root element of a tree of UI elements. We are
         associated with a Terminal object, so we're in the unique position of
         knowing our own width and height constraints, and are responsible for
@@ -66,16 +78,43 @@ class Root:
             drawn.
         '''
         self.element = element
+        element.root = self
         self.terminal = terminal or get_terminal()
+        self.loop = loop or asyncio.get_event_loop()
         self.element.terminal = self.terminal
-        self.testing = False
+        self.keyboard = Keyboard()
+
+    @contextmanager
+    def _handle_screen_resize(self):
+        signal.signal(signal.SIGWINCH, self._on_screen_resize)
+        try:
+            yield
+        finally:
+            signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+
+    def _on_screen_resize(self, sig_num, stack_frame):
+        self.draw()
 
     def run(self):
-        with self.terminal.fullscreen():
-            self.element.draw(self.terminal.width, self.terminal.height)
-            if not self.testing:
-                # FIXME: Blocking for now just to see output
-                input()
+        with self.terminal.fullscreen(), self.terminal.hidden_cursor(), (
+                self.terminal.unbuffered_input()), (
+                self.terminal.nonblocking_input()), (
+                self._handle_screen_resize()):
+            def read_stdin():
+                data = self.terminal.infile.read()
+                self.element.handle_input(self.keyboard[data])
+            if self.terminal.infile.isatty():
+                self.loop.add_reader(self.terminal.infile, read_stdin)
+            self.draw()
+            self.loop.run_forever()
+
+    def draw(self):
+        self.element.draw(self.terminal.width, self.terminal.height)
+        self.terminal.stream.flush()
+
+    def update(self):
+        self.element.update()
+        self.terminal.stream.flush()
 
 
 class Box(ABCContainerElement):

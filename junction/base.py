@@ -30,6 +30,7 @@ class ABCUIElement(metaclass=ABCMeta):
         self.updated = True
         self._previous_geometry = None
         self.default_format = None
+        self.root = None
 
     def __repr__(self):
         if self.name:
@@ -96,9 +97,14 @@ class ABCUIElement(metaclass=ABCMeta):
         if self._previous_geometry is None:
             raise ValueError("draw() must be called on {!r} before it can be "
                              "updated".format(self))
-        self._update()
-        self.updated = False
+        if self.updated:
+            self._update()
+            self.updated = False
 
     @abstractmethod
     def _update(self):
         pass
+
+    #@abstractmethod
+    def handle_input(self, data):
+        print('woo', data)

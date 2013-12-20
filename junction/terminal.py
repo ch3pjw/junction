@@ -3,6 +3,8 @@ import termios
 import tty
 import signal
 import os
+import sys
+import fcntl
 from functools import wraps
 from contextlib import contextmanager
 
@@ -24,9 +26,9 @@ def _override_sugar(func):
 
 
 class Terminal(blessings.Terminal):
-    def __init__(self, *args, handle_signals=True, **kwargs):
+    def __init__(self, *args, infile=None, handle_signals=True, **kwargs):
         super().__init__(*args, **kwargs)
-        self._normal = super()._resolve_formatter('normal')
+        self.infile = infile or sys.stdin
         if handle_signals:
             signal.signal(signal.SIGTSTP, self._handle_sigtstp)
         if self.is_a_tty:
@@ -36,6 +38,7 @@ class Terminal(blessings.Terminal):
         # We track these to make SIGTSTP restore the terminal correctly:
         self._is_fullscreen = False
         self._has_hidden_cursor = False
+        self._normal = super()._resolve_formatter('normal')
         self._resolved_sugar_cache = {}
 
     def __getattr__(self, attr):
@@ -68,6 +71,14 @@ class Terminal(blessings.Terminal):
     @_override_sugar
     def normal_cursor(self):
         self._has_hidden_cursor = False
+
+    @property
+    def color(self):
+        return Format(super().color, name='color')
+
+    @property
+    def on_color(self):
+        return Format(super().on_color, name='on_color')
 
     def _handle_sigtstp(self, sig_num, stack_frame):
         # Store current state:
@@ -118,6 +129,20 @@ class Terminal(blessings.Terminal):
         else:
             yield
 
+    @contextmanager
+    def nonblocking_input(self):
+        if hasattr(self.infile, 'fileno'):
+            # Use fcntl to set stdin to non-blocking. WARNING - this is not
+            # particularly portable!
+            flags = fcntl.fcntl(self.infile, fcntl.F_GETFL)
+            fcntl.fcntl(self.infile, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+            try:
+                yield
+            finally:
+                fcntl.fcntl(self.infile, fcntl.F_SETFL, flags)
+        else:
+            yield
+
     def draw_block(self, block, x, y, normal=None):
         if normal is not None:
             self.stream.write(normal)
@@ -152,8 +177,8 @@ class Keyboard:
 
             '\x1b[A': 'up',
             '\x1b[B': 'down',
-            '\x1b[C': 'left',
-            '\x1b[D': 'right',
+            '\x1b[C': 'right',
+            '\x1b[D': 'left',
             '\x1b[E': 'keypad5',
             '\x1b[F': 'end',
             '\x1b[G': 'keypad5',

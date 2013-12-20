@@ -83,10 +83,27 @@ class Fill(ABCDisplayElement):
         return [self.char * width] * height
 
 
-class Text(ABCDisplayElement):
+class Label(ABCDisplayElement):
     def __init__(self, content, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.content = content
+
+    def _get_block(self, width, height):
+        return [self.content]
+
+
+class Text(ABCDisplayElement):
+    def __init__(self, content, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._content = content
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = value
 
     def _get_block(self, width, height):
         lines = wrap(self.content, width)
