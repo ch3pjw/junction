@@ -103,7 +103,8 @@ class Root:
             def read_stdin():
                 data = self.terminal.infile.read()
                 self.element.handle_input(self.keyboard[data])
-            self.loop.add_reader(self.terminal.infile, read_stdin)
+            if self.terminal.infile.isatty():
+                self.loop.add_reader(self.terminal.infile, read_stdin)
             self.draw()
             self.loop.run_forever()
 
