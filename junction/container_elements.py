@@ -83,7 +83,6 @@ class Root:
         self.loop = loop or asyncio.get_event_loop()
         self.element.terminal = self.terminal
         self.keyboard = Keyboard()
-        self.testing = False
 
     @contextmanager
     def _handle_screen_resize(self):
@@ -106,9 +105,7 @@ class Root:
                 self.element.handle_input(self.keyboard[data])
             self.loop.add_reader(self.terminal.infile, read_stdin)
             self.draw()
-            if not self.testing:
-                # FIXME: Blocking for now just to see output
-                self.loop.run_forever()
+            self.loop.run_forever()
 
     def draw(self):
         self.element.draw(self.terminal.width, self.terminal.height)

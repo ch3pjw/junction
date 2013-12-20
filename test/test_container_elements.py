@@ -1,6 +1,7 @@
 # coding=utf-8
 from unittest import TestCase
-from mock import Mock, MagicMock, call
+from mock import Mock, patch, call
+import asyncio
 
 from junction.terminal import Terminal
 from junction.display_elements import Fill, ABCDisplayElement
@@ -29,8 +30,10 @@ class ContainerElementForTest(ABCContainerElement):
 
 class TestContainerElements(TestCase):
     def setUp(self):
-        self.terminal = Mock(autospec=Terminal)
-        self.terminal.fullscreen.return_value = MagicMock()
+        self.terminal = Terminal()
+        patcher = patch.object(self.terminal, 'draw_block', autospec=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_base_draw_and_update(self):
         element1 = DisplayElementForTest()
@@ -50,14 +53,20 @@ class TestContainerElements(TestCase):
         self.assertFalse(element2.updated)
 
     def test_root(self):
+        # To avoid artefacts from fullscreen contextmanager and the like:
+        self.terminal._does_styling = False
+        loop = asyncio.get_event_loop()
         fill = Fill()
-        self.terminal.width = 4
-        self.terminal.height = 4
-        root = Root(fill, terminal=self.terminal)
-        root.testing = True  # FIXME just whilst we're blocking with input()
-        root.run()
-        self.terminal.draw_block.assert_called_with(
-            ['....', '....', '....', '....'], 0, 0, fill.default_format)
+        with patch('junction.Terminal.width', 4), patch(
+                'junction.Terminal.height', 3):
+            root = Root(fill, terminal=self.terminal, loop=loop)
+            loop.call_soon(loop.stop)
+            # FIXME: this won't run in a git hook atm because stdin is
+            # different somehow, so we can't attach an input reader - need to
+            # investigate more...
+            root.run()
+            self.terminal.draw_block.assert_called_with(
+                ['....', '....', '....'], 0, 0, fill.default_format)
 
     def test_box(self):
         fill = Fill()
