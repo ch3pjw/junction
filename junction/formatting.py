@@ -2,31 +2,24 @@ from string import whitespace
 from functools import reduce
 
 
-class Format:
-    '''A replacement for blessings.Terminal formatting strings that we can use
-    to delay the determination of escape sequences until we're
-    actually drawing an element. We're also used to produce smart
-    StringWithFormatting objects that can be processed like strings without
-    terminal escape sequences in them for the purposes of layout generation
-    (i.e. using slices), but will preserve formatting.
-    '''
-    __slots__ = ['terminal_attribute']
+class LazyLookup:
+    __slots__ = ['attr_name']
 
-    def __init__(self, terminal_attribute):
-        self.terminal_attribute = terminal_attribute
+    def __init__(self, attr_name):
+        self.attr_name = attr_name
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.attr_name == other.attr_name
+        else:
+            return False
 
     def __len__(self):
-        # Terminal escape sequences have no visible length
+        # Terminal escape sequences and the like have no visible length
         return 0
 
     def __bool__(self):
         return True
-
-    def __eq__(self, other):
-        if hasattr(other, 'terminal_attribute'):
-            return self.terminal_attribute == other.terminal_attribute
-        else:
-            return False
 
     def __iter__(self):
         return iter([self])
@@ -35,9 +28,21 @@ class Format:
         return ''
 
     def __repr__(self):
-        return '{}({!r})'.format(
-            self.__class__.__name__, self.terminal_attribute)
+        return '{}({})'.format(
+            self.__class__.__name__, self.attr_name)
 
+    def do_lookup(self, obj):
+        return getattr(obj, self.attr_name)
+
+
+class Format(LazyLookup):
+    '''A replacement for blessings.Terminal formatting strings that we can use
+    to delay the determination of escape sequences until we're
+    actually drawing an element. We're also used to produce smart
+    StringWithFormatting objects that can be processed like strings without
+    terminal escape sequences in them for the purposes of layout generation
+    (i.e. using slices), but will preserve formatting.
+    '''
     def __call__(self, content_string):
         return self + content_string + self.__class__('normal')
 
@@ -50,41 +55,42 @@ class Format:
     def __radd__(self, other):
         return StringWithFormatting((other, self))
 
+    def split(self, *args):
+        return [self]
+
     def draw(self, normal, terminal):
-        if self.terminal_attribute == 'normal':
+        if self.attr_name == 'normal':
             return normal
         else:
-            formatting_string = getattr(terminal, self.terminal_attribute)
+            formatting_string = self.do_lookup(terminal)
             # FIXME: I'm not sure this is necessary:
             formatting_string._normal = normal
             return formatting_string
 
-    def split(self, *args):
-        return [self]
-
 
 class ParameterizingFormat(Format):
-    __slots__ = 'terminal_attribute', 'args'
+    '''A special type of Format object that handles being called just like a
+    blessings ParametrizingString.
+    '''
+    __slots__ = Format.__slots__ + ['args']
 
-    def __init__(self, terminal_attribute):
-        super().__init__(terminal_attribute)
+    def __init__(self, attr_name):
+        super().__init__(attr_name)
         self.args = None
-
-    def __eq__(self, other):
-        if hasattr(other, 'terminal_attribute'):
-            return (
-                self.terminal_attribute == other.terminal_attribute and
-                self.args == other.args)
-        else:
-            return False
 
     def __repr__(self):
         if self.args:
             return '{}({}({}))'.format(
-                self.__class__.__name__, self.terminal_attribute,
+                self.__class__.__name__, self.attr_name,
                 ', '.join(repr(arg) for arg in self.args))
         else:
             return super().__repr__()
+
+    def __eq__(self, other):
+        if super().__eq__(other):
+            return self.args == other.args
+        else:
+            return False
 
     def __call__(self, *args):
         self.args = args
@@ -99,13 +105,17 @@ class ParameterizingFormat(Format):
 
 
 class FormatFactory:
+    '''A simple helper object for constructing Format objects conveniently from
+    Root in a similar way to format escape sequences being accessible from a
+    blessings Terminal.
+    '''
     __slots__ = []
 
-    def __getattr__(self, terminal_attribute):
-        if terminal_attribute in ('color', 'on_color'):
-            return ParameterizingFormat(terminal_attribute)
+    def __getattr__(self, attr_name):
+        if attr_name in ('color', 'on_color'):
+            return ParameterizingFormat(attr_name)
         else:
-            return Format(terminal_attribute)
+            return Format(attr_name)
 
 
 class StringWithFormatting:

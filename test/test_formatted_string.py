@@ -51,7 +51,7 @@ class TestFormat(TestCase):
                 self.fail('iterating Format should only produce one item')
 
     def test_repr(self):
-        self.assertEqual(repr(Format('hello')), "Format('hello')")
+        self.assertEqual(repr(Format('hello')), 'Format(hello)')
 
     def test_call_with_regular_content_string(self):
         f = Format('magic escape seq')
@@ -91,7 +91,7 @@ class TestFormat(TestCase):
 class TestParameterizingFormat(TestCase):
     def test_repr(self):
         f = ParameterizingFormat('something')
-        self.assertEqual(repr(f), "ParameterizingFormat('something')")
+        self.assertEqual(repr(f), 'ParameterizingFormat(something)')
         f(121, ['hello', 'world'])
         self.assertEqual(
             repr(f),
@@ -126,7 +126,7 @@ class TestStringWithFormatting(TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.swf),
-            "StringWithFormatting('Hello ', Format('blue'), 'World!')")
+            "StringWithFormatting('Hello ', Format(blue), 'World!')")
 
     def test_draw(self):
         terminal = Terminal(force_styling=True)
