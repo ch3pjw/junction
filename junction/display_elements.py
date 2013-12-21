@@ -1,6 +1,7 @@
 from abc import abstractmethod
 
 from .base import ABCUIElement
+from .root import Root
 from .util import clamp, crop_or_expand
 from .terminal import get_terminal
 from .formatting import StringWithFormatting, wrap
@@ -108,7 +109,7 @@ class Text(ABCDisplayElement):
     def _get_block(self, width, height):
         lines = wrap(self.content, width)
         if any(isinstance(line, StringWithFormatting) for line in lines):
-            lines[-1] += self.terminal.normal
+            lines[-1] += Root.format.normal
         return lines
 
 

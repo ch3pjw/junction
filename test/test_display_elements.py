@@ -1,14 +1,11 @@
 # coding=utf-8
 from unittest import TestCase
 
-from junction.terminal import Terminal
+from junction.root import Root
 from junction.display_elements import Fill, Text, ProgressBar
 
 
 class TestDisplayElements(TestCase):
-    def setUp(self):
-        self.terminal = Terminal(force_styling=True)
-
     def test_set_get_alignment(self):
         fill = Fill()
         fill.valign = 'middle'
@@ -74,22 +71,22 @@ class TestDisplayElements(TestCase):
 
     def test_text_with_formatting(self):
         content = (
-            self.terminal.bold + 'The ' + self.terminal.normal + 'quick ' +
-            self.terminal.red('brown') + ' fox ' +
-            self.terminal.underline('jumps'))  # +
+            Root.format.bold + 'The ' + Root.format.normal + 'quick ' +
+            Root.format.red('brown') + ' fox ' +
+            Root.format.underline('jumps'))  # +
             #' over {t.green_on_white}the lazy{t.normal} dog'.format(
             #    t=self.terminal))
             # FIXME: can't yet handle .format insertion of Format objects into
             # strings
         text = Text(content)
         expected = [
-            (self.terminal.bold + 'The ' + self.terminal.normal + 'quick ' +
-             self.terminal.red + 'brown' + self.terminal.normal + '  '),
-            ('fox ' + self.terminal.underline + 'jumps' +
-             self.terminal.normal + self.terminal.normal + '        '),
-            #+ ' over ' + self.terminal.green_on_white),
-            #('the lazy' + self.terminal.normal + ' dog' +
-            # self.terminal.normal + '     '),
+            (Root.format.bold + 'The ' + Root.format.normal + 'quick ' +
+             Root.format.red + 'brown' + Root.format.normal + '  '),
+            ('fox ' + Root.format.underline + 'jumps' +
+             Root.format.normal + Root.format.normal + '        '),
+            #+ ' over ' + Root.format.green_on_white),
+            #('the lazy' + Root.format.normal + ' dog' +
+            # Root.format.normal + '     '),
             '                 ',
             '                 ']
         actual = text._get_cropped_block(17, 4)

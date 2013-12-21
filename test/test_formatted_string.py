@@ -2,7 +2,8 @@ from unittest import TestCase
 from io import StringIO
 import blessings
 
-from junction.formatting import Format, StringWithFormatting, TextWrapper, wrap
+from junction.formatting import (
+    Format, ParameterizingFormat, StringWithFormatting, TextWrapper, wrap)
 from junction import Terminal, Fill
 
 long_swf = (
@@ -36,6 +37,11 @@ class TestFormat(TestCase):
         self.assertTrue(bool(Format('')))
         self.assertTrue(bool(Format('swift')))
 
+    def test_eq(self):
+        self.assertEqual(Format('DAT'), Format('DAT'))
+        self.assertNotEqual(Format('SAIT'), Format('8Track'))
+        self.assertNotEqual(Format('Leotape'), 'not-a-format')
+
     def test_iter(self):
         f = Format('bob')
         for i, thing in enumerate(f):
@@ -46,30 +52,21 @@ class TestFormat(TestCase):
 
     def test_repr(self):
         self.assertEqual(repr(Format('hello')), "Format('hello')")
-        self.assertEqual(
-            repr(Format('hello', 'some name')), 'Format(some name)')
-
-    def test_call_with_parametrizing_string(self):
-        ps = blessings.ParametrizingString('cup')  # Must be legit curses cap
-        f = Format(ps)
-        self.assertEqual(f, ps)
-        self.assertEqual(f(1, 2), ps(1, 2))
-        self.assertIsInstance(f(2, 3), Format)
-        self.assertIsNot(f(3, 4), f)
-        f.name = 'bob'
-        self.assertEqual(f(4, 5).name, 'bob')
 
     def test_call_with_regular_content_string(self):
         f = Format('magic escape seq')
         result = f('printable text')
         self.assertIsInstance(result, StringWithFormatting)
-        self.assertEqual(result, f + 'printable text' + Format(None))
+        self.assertEqual(result, f + 'printable text' + Format('normal'))
 
     def test_draw(self):
-        f = Format('Some escape sequence')
-        self.assertEqual(f.draw('Whatever is normal?'), 'Some escape sequence')
-        f = Format(None)
-        self.assertEqual(f.draw('Am I normal?'), 'Am I normal?')
+        terminal = Terminal(force_styling=True)
+        f = Format('blue')
+        self.assertEqual(f.draw('red', terminal), terminal.blue)
+        f = Format('normal')
+        # FIXME: I'm not sure I like this behaviour any more... might be better
+        # to have composable format things that we can pass around as 'normal'
+        self.assertEqual(f.draw('yellow', terminal), 'yellow')
 
     def test_equality(self):
         self.assertEqual(Format('foo'), Format('foo'))
@@ -91,9 +88,34 @@ class TestFormat(TestCase):
         self.assertIs(f.split()[0], f)
 
 
+class TestParameterizingFormat(TestCase):
+    def test_repr(self):
+        f = ParameterizingFormat('something')
+        self.assertEqual(repr(f), "ParameterizingFormat('something')")
+        f(121, ['hello', 'world'])
+        self.assertEqual(
+            repr(f),
+            "ParameterizingFormat(something(121, ['hello', 'world']))")
+
+    def test_eq(self):
+        f = ParameterizingFormat('bob')
+        self.assertEqual(f, ParameterizingFormat('bob'))
+        f(7)
+        self.assertNotEqual(f, ParameterizingFormat('bob'))
+        self.assertEqual(f, ParameterizingFormat('bob')(7))
+        self.assertNotEqual(f, 'not-a-parameterizing-string')
+
+    def test_draw(self):
+        terminal = Terminal(force_styling=True)
+        f = ParameterizingFormat('cup')  # Must be legit curses cap
+        self.assertEqual(f.draw('normal', terminal), terminal.cup)
+        f(1, 2)
+        self.assertEqual(f.draw('normal', terminal), terminal.cup(1, 2))
+
+
 class TestStringWithFormatting(TestCase):
     def setUp(self):
-        self.swf = 'Hello ' + Format('hiding') + 'World!'
+        self.swf = 'Hello ' + Format('blue') + 'World!'
 
     def test_len(self):
         self.assertEqual(len(self.swf), len('Hello World!'))
@@ -104,15 +126,18 @@ class TestStringWithFormatting(TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.swf),
-            "StringWithFormatting('Hello ', Format('hiding'), 'World!')")
+            "StringWithFormatting('Hello ', Format('blue'), 'World!')")
 
     def test_draw(self):
-        self.assertEqual(self.swf.draw('normal'), 'Hello hidingWorld!')
+        terminal = Terminal(force_styling=True)
+        self.assertEqual(
+            self.swf.draw('normal', terminal),
+            'Hello {}World!'.format(terminal.blue))
 
     def test_equality(self):
-        self.assertEqual(self.swf, 'Hello ' + Format('hiding') + 'World!')
+        self.assertEqual(self.swf, 'Hello ' + Format('blue') + 'World!')
         self.assertEqual(self.swf, StringWithFormatting(
-            ('Hello ', Format('hiding'), 'World!')))
+            ('Hello ', Format('blue'), 'World!')))
         self.assertNotEqual(self.swf, StringWithFormatting('Hello World!'))
         self.assertNotEqual(self.swf, 'Hello World!')
 
@@ -125,7 +150,7 @@ class TestStringWithFormatting(TestCase):
         long_swf = Format('PrePrefixFormat') + long_swf
         self.assertIsInstance(long_swf, StringWithFormatting)
         self.assertEqual(long_swf._content, (
-            Format('PrePrefixFormat'), 'PrefixHello ', Format('hiding'),
+            Format('PrePrefixFormat'), 'PrefixHello ', Format('blue'),
             'World!'))
         # String suffix
         long_swf = self.swf + 'Suffix'
@@ -134,17 +159,17 @@ class TestStringWithFormatting(TestCase):
         # Format suffix
         long_swf = long_swf + Format('SufSuffixFormat')
         self.assertEqual(long_swf._content, (
-            'Hello ', Format('hiding'), 'World!Suffix',
+            'Hello ', Format('blue'), 'World!Suffix',
             Format('SufSuffixFormat')))
         # Adding two StringWithFormatting objects
         long_swf = self.swf + self.swf
         self.assertEqual(long_swf._content, (
-            'Hello ', Format('hiding'), 'World!Hello ', Format('hiding'),
+            'Hello ', Format('blue'), 'World!Hello ', Format('blue'),
             'World!'))
         # Reverse-adding a str:
         long_swf = 'fantastic' + self.swf
         self.assertEqual(long_swf._content, (
-            'fantasticHello ', Format('hiding'), 'World!'))
+            'fantasticHello ', Format('blue'), 'World!'))
 
     def test_get_item_index(self):
         self.assertEqual(self.swf[2], 'l')

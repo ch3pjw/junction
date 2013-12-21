@@ -4,9 +4,10 @@ from mock import Mock, patch, call
 import asyncio
 
 from junction.terminal import Terminal
+from junction.root import Root
 from junction.display_elements import Fill, ABCDisplayElement
 from junction.container_elements import (
-    ABCContainerElement, Root, Box, Stack, Zebra)
+    ABCContainerElement, Box, Stack, Zebra)
 
 
 class DisplayElementForTest(ABCDisplayElement):

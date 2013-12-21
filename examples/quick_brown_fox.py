@@ -1,9 +1,14 @@
 from junction import Terminal, Root, Text
 
 term = Terminal()
+# The resulting StringWithFormatting passed to the Text element constructor
+# below illustrates how we try to match up to blessings' ways of doing
+# formatting. Note that we can't currently insert well into strings with
+# .format()!
 text = Text(
-    term.bold + 'The ' + term.normal + 'quick ' + term.red('brown') + ' fox ' +
-    term.underline('jumps') +
-    ' over {t.green_on_white}the lazy{t.normal} dog'.format(t=term))
+    Root.format.bold + 'The ' + Root.format.normal + 'quick ' +
+    Root.format.red('brown') + ' fox ' + Root.format.underline('jumps') +
+    ' over {r.format.green_on_white}the lazy{r.format.normal} dog'.format(
+        r=Root))
 root = Root(text)
 root.run()

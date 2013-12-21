@@ -1,40 +1,19 @@
-from blessings import ParametrizingString
 from string import whitespace
 from functools import reduce
 
 
-class Format(str):
+class Format:
     '''A replacement for blessings.Terminal formatting strings that we can use
-    to delay the determination of what 'normal' formatting is until we're
+    to delay the determination of escape sequences until we're
     actually drawing an element. We're also used to produce smart
     StringWithFormatting objects that can be processed like strings without
     terminal escape sequences in them for the purposes of layout generation
     (i.e. using slices), but will preserve formatting.
-
-    We derive from string so that we can be easily written out to a stream.
     '''
-    __slots__ = ('_normal', '_orig_class', 'name')
+    __slots__ = ['terminal_attribute']
 
-    def __new__(cls, escape_sequence, name=None):
-        '''
-        :parameter escape_sequence: the text-formatting terminal escape
-            sequence this Format object is to embody, or None if this
-            object is to act like the 'normal' format, but where 'normal' could
-            potentially be another format defined arbitrarily.
-        '''
-        if escape_sequence is None:
-            # Whether this format is representing 'normal' formatting. We
-            # provide this also to maintain compatibility with
-            # blessings.ParametrizingString:
-            _normal = True
-            escape_sequence = ''
-        else:
-            _normal = False
-        obj = super().__new__(cls, escape_sequence)
-        obj._orig_class = escape_sequence.__class__
-        obj._normal = _normal
-        obj.name = name
-        return obj
+    def __init__(self, terminal_attribute):
+        self.terminal_attribute = terminal_attribute
 
     def __len__(self):
         # Terminal escape sequences have no visible length
@@ -43,26 +22,24 @@ class Format(str):
     def __bool__(self):
         return True
 
+    def __eq__(self, other):
+        if hasattr(other, 'terminal_attribute'):
+            return self.terminal_attribute == other.terminal_attribute
+        else:
+            return False
+
     def __iter__(self):
         return iter([self])
 
-    def __repr__(self):
-        return '{}({})'.format(
-            self.__class__.__name__, self.name or super().__repr__())
+    def __str__(self):
+        return ''
 
-    def __call__(self, *args):
-        if issubclass(self._orig_class, ParametrizingString):
-            return self.__class__(
-                self._orig_class.__call__(self, *args),
-                name=self.name)
-        else:
-            # Emulate the behaviour of blessings.FormattingString, but with our
-            # StringWithFormatting objects instead
-            result = self
-            for word in args:
-                result += word
-            result += Format(None, name='normal')
-            return result
+    def __repr__(self):
+        return '{}({!r})'.format(
+            self.__class__.__name__, self.terminal_attribute)
+
+    def __call__(self, content_string):
+        return self + content_string + self.__class__('normal')
 
     def __add__(self, other):
         if isinstance(other, StringWithFormatting):
@@ -73,14 +50,62 @@ class Format(str):
     def __radd__(self, other):
         return StringWithFormatting((other, self))
 
-    def draw(self, normal):
-        if self._normal:
+    def draw(self, normal, terminal):
+        if self.terminal_attribute == 'normal':
             return normal
         else:
-            return self
+            formatting_string = getattr(terminal, self.terminal_attribute)
+            # FIXME: I'm not sure this is necessary:
+            formatting_string._normal = normal
+            return formatting_string
 
     def split(self, *args):
         return [self]
+
+
+class ParameterizingFormat(Format):
+    __slots__ = 'terminal_attribute', 'args'
+
+    def __init__(self, terminal_attribute):
+        super().__init__(terminal_attribute)
+        self.args = None
+
+    def __eq__(self, other):
+        if hasattr(other, 'terminal_attribute'):
+            return (
+                self.terminal_attribute == other.terminal_attribute and
+                self.args == other.args)
+        else:
+            return False
+
+    def __repr__(self):
+        if self.args:
+            return '{}({}({}))'.format(
+                self.__class__.__name__, self.terminal_attribute,
+                ', '.join(repr(arg) for arg in self.args))
+        else:
+            return super().__repr__()
+
+    def __call__(self, *args):
+        self.args = args
+        return self
+
+    def draw(self, normal, terminal):
+        parameterizing_string = super().draw(normal, terminal)
+        if self.args:
+            return parameterizing_string(*self.args)
+        else:
+            return parameterizing_string
+
+
+class FormatFactory:
+    __slots__ = []
+
+    def __getattr__(self, terminal_attribute):
+        if terminal_attribute in ('color', 'on_color'):
+            return ParameterizingFormat(terminal_attribute)
+        else:
+            return Format(terminal_attribute)
 
 
 class StringWithFormatting:
@@ -201,15 +226,16 @@ class StringWithFormatting:
         else:
             return str(self)[index]
 
-    def _iter_for_draw(self, normal):
+    def _iter_for_draw(self, normal, terminal):
         for string in self._content:
             if isinstance(string, Format):
-                yield string.draw(normal)
+                yield string.draw(normal, terminal)
             else:
                 yield string
 
-    def draw(self, normal):
-        return ''.join(string for string in self._iter_for_draw(normal))
+    def draw(self, normal, terminal):
+        return ''.join(
+            string for string in self._iter_for_draw(normal, terminal))
 
 
 class TextWrapper:

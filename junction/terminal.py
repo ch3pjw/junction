@@ -38,7 +38,6 @@ class Terminal(blessings.Terminal):
         # We track these to make SIGTSTP restore the terminal correctly:
         self._is_fullscreen = False
         self._has_hidden_cursor = False
-        self._normal = super()._resolve_formatter('normal')
         self._resolved_sugar_cache = {}
 
     def __getattr__(self, attr):
@@ -71,14 +70,6 @@ class Terminal(blessings.Terminal):
     @_override_sugar
     def normal_cursor(self):
         self._has_hidden_cursor = False
-
-    @property
-    def color(self):
-        return Format(super().color, name='color')
-
-    @property
-    def on_color(self):
-        return Format(super().on_color, name='on_color')
 
     def _handle_sigtstp(self, sig_num, stack_frame):
         # Store current state:
@@ -149,15 +140,8 @@ class Terminal(blessings.Terminal):
         for y, line in enumerate(block, start=y):
             self.stream.write(self.move(y, x))
             if isinstance(line, StringWithFormatting):
-                line = line.draw(normal or self._normal)
+                line = line.draw(normal or self.normal, self)
             self.stream.write(line)
-
-    def _resolve_formatter(self, name):
-        if name == 'normal':
-            resolved = None
-        else:
-            resolved = super()._resolve_formatter(name)
-        return Format(resolved, name=name)
 
 _terminal = Terminal()
 
