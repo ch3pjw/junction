@@ -28,8 +28,20 @@ class LazyLookup:
         return ''
 
     def __repr__(self):
-        return '{}({})'.format(
+        return '{}({!r})'.format(
             self.__class__.__name__, self.attr_name)
+
+    def __add__(self, other):
+        if isinstance(other, StringWithFormatting):
+            return other.__radd__(self)
+        else:
+            return StringWithFormatting((self, other))
+
+    def __radd__(self, other):
+        return StringWithFormatting((other, self))
+
+    def split(self, *args):
+        return [self]
 
     def do_lookup(self, obj):
         return getattr(obj, self.attr_name)
@@ -45,18 +57,6 @@ class Format(LazyLookup):
     '''
     def __call__(self, content_string):
         return self + content_string + self.__class__('normal')
-
-    def __add__(self, other):
-        if isinstance(other, StringWithFormatting):
-            return other.__radd__(self)
-        else:
-            return StringWithFormatting((self, other))
-
-    def __radd__(self, other):
-        return StringWithFormatting((other, self))
-
-    def split(self, *args):
-        return [self]
 
     def draw(self, terminal, default_format=None):
         if default_format and self.attr_name == 'normal':
@@ -81,7 +81,7 @@ class ParameterizingFormat(Format):
 
     def __repr__(self):
         if self.args:
-            return '{}({}({}))'.format(
+            return '{}({!r})({})'.format(
                 self.__class__.__name__, self.attr_name,
                 ', '.join(repr(arg) for arg in self.args))
         else:
