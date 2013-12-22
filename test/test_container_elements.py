@@ -6,8 +6,7 @@ import asyncio
 from junction.terminal import Terminal
 from junction.root import Root
 from junction.display_elements import Fill, ABCDisplayElement
-from junction.container_elements import (
-    ABCContainerElement, Box, Stack, Zebra)
+from junction.container_elements import Box, Stack, Zebra
 
 
 class DisplayElementForTest(ABCDisplayElement):
@@ -19,39 +18,12 @@ class DisplayElementForTest(ABCDisplayElement):
         return ['hello', 'world']
 
 
-class ContainerElementForTest(ABCContainerElement):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.terminal = Mock()
-
-    def _get_elements_sizes_and_positions(self, width, height, x, y):
-        for element in self:
-            yield element, width, height, x, y
-
-
 class TestContainerElements(TestCase):
     def setUp(self):
         self.terminal = Terminal()
         patcher = patch.object(self.terminal, 'draw_block', autospec=True)
         patcher.start()
         self.addCleanup(patcher.stop)
-
-    def test_base_draw_and_update(self):
-        element1 = DisplayElementForTest()
-        element2 = DisplayElementForTest()
-        container = ContainerElementForTest(element1, element2)
-        with self.assertRaises(ValueError):
-            container.update()
-        container.draw(1, 2, 3, 4, 'bottom', 'right')
-        element1._draw.assert_called_once_with(1, 2, 3, 4, 'bottom', 'right')
-        element2._draw.assert_called_once_with(1, 2, 3, 4, 'bottom', 'right')
-        element1._draw.reset_mock()
-        element2._draw.reset_mock()
-        element2.updated = True
-        container.update()
-        self.assertEqual(element1._draw.call_count, 0)
-        element2._draw.assert_called_once_with(1, 2, 3, 4, 'bottom', 'right')
-        self.assertFalse(element2.updated)
 
     def test_root(self):
         # To avoid artefacts from fullscreen contextmanager and the like:
@@ -62,18 +34,43 @@ class TestContainerElements(TestCase):
                 'junction.Terminal.height', 3):
             root = Root(fill, terminal=self.terminal, loop=loop)
             loop.call_soon(loop.stop)
-            # FIXME: this won't run in a git hook atm because stdin is
-            # different somehow, so we can't attach an input reader - need to
-            # investigate more...
             root.run()
-            self.terminal.draw_block.assert_called_with(
-                ['....', '....', '....'], 0, 0, fill.default_format)
+        self.terminal.draw_block.assert_called_with(
+            ['....', '....', '....'], 0, 0, fill.default_format)
+        fill2 = Fill()
+        root.element = fill2
+        self.assertIsNone(fill.root)
+        self.assertIs(root.element, fill2)
+        self.assertIs(fill2.root, root)
+
+    def test_update(self):
+        fill1 = Fill('1')
+        fill1.default_format = 'oney'
+        fill2 = Fill('2')
+        fill1.default_format = 'twoey'
+        stack = Stack(fill1, fill2)
+        root = Root(stack, terminal=self.terminal)
+        fill2.updated = True
+        with self.assertRaises(ValueError):
+            root.update()
+        with patch('junction.Terminal.width', 2), patch(
+                'junction.Terminal.height', 2):
+            root.draw()
+        self.terminal.draw_block.assert_has_calls([
+            call(['11'], 0, 0, fill1.default_format),
+            call(['22'], 0, 1, fill2.default_format)])
+        self.terminal.draw_block.reset_mock()
+        root.update()
+        self.assertEqual(self.terminal.draw_block.call_count, 0)
+        fill2.updated = True
+        root.update()
+        self.terminal.draw_block.assert_called_once_with(
+            ['22'], 0, 1, fill2.default_format)
 
     def test_box(self):
         fill = Fill()
         box = Box(fill)
-        box.terminal = self.terminal
-        box.draw(4, 4)
+        box.draw(4, 4, terminal=self.terminal)
         self.terminal.draw_block.assert_has_calls([
             call(['..', '..'], 1, 1, box.default_format),
             call(['+--+'], 0, 0, box.default_format),
@@ -83,8 +80,7 @@ class TestContainerElements(TestCase):
             any_order=True)
         self.terminal.draw_block.reset_mock()
         box = Box(fill, chars='╓─┐│┘─╙║')
-        box.terminal = self.terminal
-        box.draw(3, 3)
+        box.draw(3, 3, terminal=self.terminal)
         self.terminal.draw_block.assert_has_calls([
             call(['.'], 1, 1, box.default_format),
             call(['╓─┐'], 0, 0, box.default_format),
@@ -121,37 +117,36 @@ class TestContainerElements(TestCase):
         fill2.default_format = 'more like two'
         fill2.min_height = 2
         stack = Stack(fill1, fill2)
-        stack.terminal = self.terminal
-        stack.draw(5, 4)
+        stack.draw(5, 4, terminal=self.terminal)
         self.terminal.draw_block.assert_has_calls([
             call(['11111'], 0, 0, fill1.default_format),
             call(['22222', '22222'], 0, 1, fill2.default_format)])
         self.terminal.draw_block.reset_mock()
         self.assertIsNone(stack.min_width)
-        stack.draw(3, 2)
+        stack.draw(3, 2, terminal=self.terminal)
         self.terminal.draw_block.assert_has_calls([
             call(['111'], 0, 0, fill1.default_format),
             call(['222'], 0, 1, fill2.default_format)])
         self.terminal.draw_block.reset_mock()
-        stack.draw(4, 1)
+        stack.draw(4, 1, terminal=self.terminal)
         self.terminal.draw_block.assert_has_calls([
             call(['1111'], 0, 0, fill1.default_format)])
         self.terminal.draw_block.reset_mock()
         stack.valign = 'bottom'
-        stack.draw(3, 2)
+        stack.draw(3, 2, terminal=self.terminal)
         self.terminal.draw_block.assert_has_calls([
             call(['222', '222'], 0, 0, fill2.default_format)])
         self.terminal.draw_block.reset_mock()
         fill3 = Fill('3', name='3')
         stack.add_element(fill3)
-        stack.draw(5, 4)
+        stack.draw(5, 4, terminal=self.terminal)
         self.terminal.draw_block.assert_has_calls([
             call(['33333'], 0, 3, fill3.default_format),
             call(['22222', '22222'], 0, 1, fill2.default_format),
             call(['11111'], 0, 0, fill1.default_format)])
         self.terminal.draw_block.reset_mock()
         stack.remove_element(fill2)
-        stack.draw(5, 4)
+        stack.draw(5, 4, terminal=self.terminal)
         self.terminal.draw_block.assert_has_calls([
             call(['33333'], 0, 3, fill3.default_format),
             call(['11111'], 0, 2, fill1.default_format)])
@@ -164,8 +159,7 @@ class TestContainerElements(TestCase):
         zebra = Zebra(
             fill1, fill1, fill1, fill2, fill1, even_format='hello',
             odd_format='world')
-        zebra.terminal = self.terminal
-        zebra.draw(3, 10)
+        zebra.draw(3, 10, terminal=self.terminal)
         self.terminal.draw_block.assert_has_calls([
             call(['...'], 0, 0, 'hello'),
             call(['...'], 0, 1, 'world'),
@@ -174,16 +168,16 @@ class TestContainerElements(TestCase):
             call(['...'], 0, 5, 'hello')])
         self.terminal.draw_block.reset_mock()
         zebra.even_format = None
-        zebra.draw(3, 10)
+        zebra.draw(3, 10, terminal=self.terminal)
         self.terminal.draw_block.assert_has_calls([
-            call(['...'], 0, 0, self.terminal._normal),
+            call(['...'], 0, 0, None),
             call(['...'], 0, 1, 'world'),
-            call(['...'], 0, 2, self.terminal._normal),
+            call(['...'], 0, 2, None),
             call([',,,', ',,,'], 0, 3, 'world'),
-            call(['...'], 0, 5, self.terminal._normal)])
+            call(['...'], 0, 5, None)])
         self.terminal.draw_block.reset_mock()
         zebra.default_format = 'norm'
-        zebra.draw(3, 10)
+        zebra.draw(3, 10, terminal=self.terminal)
         self.terminal.draw_block.assert_has_calls([
             call(['...'], 0, 0, 'norm'),
             call(['...'], 0, 1, 'world'),

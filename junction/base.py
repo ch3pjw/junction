@@ -26,10 +26,9 @@ class ABCUIElement(metaclass=ABCMeta):
         self.valign = valign
         self.fillchar = fillchar
         self.name = name
-        self._terminal = None
         self.updated = True
         self._previous_geometry = None
-        self.default_format = None
+        self._default_format = None
         self.root = None
 
     def __repr__(self):
@@ -67,6 +66,7 @@ class ABCUIElement(metaclass=ABCMeta):
     @halign.setter
     def halign(self, value):
         self._set_align('horizontal', value)
+        self.updated = True
 
     @property
     def valign(self):
@@ -75,34 +75,42 @@ class ABCUIElement(metaclass=ABCMeta):
     @valign.setter
     def valign(self, value):
         self._set_align('vertical', value)
+        self.updated = True
 
     @property
-    def terminal(self):
-        return self._terminal or get_terminal()
+    def default_format(self):
+        return self._default_format
 
-    @terminal.setter
-    def terminal(self, terminal):
-        self._terminal = terminal
+    @default_format.setter
+    def default_format(self, value):
+        self._default_format = value
+        self.updated = True
 
-    def draw(self, width, height, x=0, y=0, x_crop='left', y_crop='top'):
-        self._draw(width, height, x, y, x_crop, y_crop)
+    def draw(self, width, height, x=0, y=0, x_crop='left', y_crop='top',
+             default_format=None, terminal=None):
+        if not terminal:
+            raise ValueError('termporary whilst refactoring')
+        self._draw(
+            width, height, x, y, x_crop, y_crop, default_format=default_format,
+            terminal=terminal)
         self._previous_geometry = Geometry(width, height, x, y, x_crop, y_crop)
         self.updated = False
 
     @abstractmethod
-    def _draw(self, width, height, x, y, x_crop, y_crop):
+    def _draw(self, width, height, x, y, x_crop, y_crop, default_format,
+              terminal):
         pass
 
-    def update(self):
+    def update(self, default_format=None, terminal=None):
         if self._previous_geometry is None:
             raise ValueError("draw() must be called on {!r} before it can be "
                              "updated".format(self))
         if self.updated:
-            self._update()
+            self._update(default_format, terminal)
             self.updated = False
 
     @abstractmethod
-    def _update(self):
+    def _update(self, default_format, terminal):
         pass
 
     #@abstractmethod

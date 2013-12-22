@@ -6,10 +6,10 @@ from junction.base import ABCUIElement
 class TestABCUIElement(TestCase):
     def test_repr(self):
         class MyElement(ABCUIElement):
-            def _draw(self):
+            def _draw(self, *args, **kwargs):
                 pass
 
-            def _update(self):
+            def _update(self, *args, **kwargs):
                 pass
         my_element = MyElement()
         self.assertIn('MyElement element', repr(my_element))

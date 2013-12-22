@@ -9,21 +9,42 @@ from .terminal import get_terminal, Keyboard
 class Root:
     format = FormatFactory()
 
-    def __init__(self, element, *args, terminal=None, loop=None, **kwargs):
+    def __init__(self, element=None, styles=None, terminal=None, loop=None):
         '''Represents the root element of a tree of UI elements. We are
         associated with a Terminal object, so we're in the unique position of
         knowing our own width and height constraints, and are responsible for
         passing those down the tree when we are asked to draw ourselves.
 
         :parameter element: The element which will be drawn when the root is
-            drawn.
+            drawn. (Optional, can be reassigned at any time.)
+        :parameter styles: A dictionary mapping names to particular Format or
+            StringWithFormatting objects. (Optional.)
+        :parameter terminal: An instnace of a junction.Terminal object to use
+            for communication with your TTY. (Optional, we will grab a default
+            and can be reassigned so long as we're not currently running.)
+        :parameter loop: The asyncio event loop to use for the main ``run()``
+            method. (Optional, we will grab a default if none is provided, and
+            the loop can be reassigned so long as we're not currently running.)
         '''
-        self.element = element
-        element.root = self
+        self._element = None
+        if element:
+            self.element = element
         self.terminal = terminal or get_terminal()
         self.loop = loop or asyncio.get_event_loop()
-        self.element.terminal = self.terminal
         self.keyboard = Keyboard()
+        self.default_format = None
+
+    @property
+    def element(self):
+        return self._element
+
+    @element.setter
+    def element(self, new_element):
+        if self._element:
+            self._element.root = None
+        self._element = new_element
+        if new_element:
+            new_element.root = self
 
     @contextmanager
     def _handle_screen_resize(self):
@@ -50,9 +71,12 @@ class Root:
             self.loop.run_forever()
 
     def draw(self):
-        self.element.draw(self.terminal.width, self.terminal.height)
+        self.element.draw(
+            self.terminal.width, self.terminal.height,
+            default_format=self.default_format,
+            terminal=self.terminal)
         self.terminal.stream.flush()
 
     def update(self):
-        self.element.update()
+        self.element.update(self.default_format, self.terminal)
         self.terminal.stream.flush()

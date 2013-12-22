@@ -134,14 +134,16 @@ class Terminal(blessings.Terminal):
         else:
             yield
 
-    def draw_block(self, block, x, y, normal=None):
-        if normal is not None:
-            self.stream.write(normal)
+    def draw_block(self, block, x, y, default_format=None):
+        if default_format is not None:
+            self.stream.write(default_format.draw(self))
         for y, line in enumerate(block, start=y):
             self.stream.write(self.move(y, x))
             if isinstance(line, StringWithFormatting):
-                line = line.draw(normal or self.normal, self)
+                line = line.draw(self, default_format)
             self.stream.write(line)
+        if default_format is not None:
+            self.stream.write(self.normal)
 
 _terminal = Terminal()
 

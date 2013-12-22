@@ -58,13 +58,14 @@ class Format(LazyLookup):
     def split(self, *args):
         return [self]
 
-    def draw(self, normal, terminal):
-        if self.attr_name == 'normal':
-            return normal
+    def draw(self, terminal, default_format=None):
+        if default_format and self.attr_name == 'normal':
+            return default_format.draw(terminal)
         else:
             formatting_string = self.do_lookup(terminal)
             # FIXME: I'm not sure this is necessary:
-            formatting_string._normal = normal
+            if default_format:
+                formatting_string._normal = default_format.draw(terminal)
             return formatting_string
 
 
@@ -96,8 +97,8 @@ class ParameterizingFormat(Format):
         self.args = args
         return self
 
-    def draw(self, normal, terminal):
-        parameterizing_string = super().draw(normal, terminal)
+    def draw(self, terminal, default_format=None):
+        parameterizing_string = super().draw(terminal, default_format)
         if self.args:
             return parameterizing_string(*self.args)
         else:
@@ -109,9 +110,12 @@ class FormatFactory:
     Root in a similar way to format escape sequences being accessible from a
     blessings Terminal.
     '''
-    __slots__ = []
+    __slots__ = []  # Ensure noone can store arbitrary attributes on us
 
     def __getattr__(self, attr_name):
+        return self.get_format(attr_name)
+
+    def get_format(self, attr_name):
         if attr_name in ('color', 'on_color'):
             return ParameterizingFormat(attr_name)
         else:
@@ -138,6 +142,10 @@ class StringWithFormatting:
 
     def __len__(self):
         return len(str(self))
+
+    def __bool__(self):
+        # We're not False, even if we only have content that isn't printable
+        return bool(self._content)
 
     def __contains__(self, obj):
         if isinstance(obj, Format):
@@ -236,16 +244,16 @@ class StringWithFormatting:
         else:
             return str(self)[index]
 
-    def _iter_for_draw(self, normal, terminal):
+    def _iter_for_draw(self, terminal, default_format):
         for string in self._content:
             if isinstance(string, Format):
-                yield string.draw(normal, terminal)
+                yield string.draw(terminal, default_format)
             else:
                 yield string
 
-    def draw(self, normal, terminal):
+    def draw(self, terminal, default_format=None):
         return ''.join(
-            string for string in self._iter_for_draw(normal, terminal))
+            string for string in self._iter_for_draw(terminal, default_format))
 
 
 class TextWrapper:

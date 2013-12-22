@@ -1,6 +1,5 @@
 from unittest import TestCase
 from io import StringIO
-import blessings
 
 from junction.formatting import (
     Format, ParameterizingFormat, StringWithFormatting, TextWrapper, wrap)
@@ -18,14 +17,12 @@ class TestFormattingBehviour(TestCase):
 
     def test_default_formatting(self):
         fill = Fill()
-        fill.terminal = self.terminal
-        # FIXME: need to be able to handle compound formats/mutliple formats
-        fill.default_format = self.terminal.bold  # + self.terminal.green
-        fill.draw(3, 1)
-        bless_term = blessings.Terminal(force_styling=True)
+        fill.default_format = Format('bold') + Format('green')
+        fill.draw(3, 1, terminal=self.terminal)
         self.assertEqual(
             self.stream.getvalue(),
-            bless_term.bold + bless_term.move(0, 0) + '...')
+            self.terminal.bold + self.terminal.green +
+            self.terminal.move(0, 0) + '...' + self.terminal.normal)
 
 
 class TestFormat(TestCase):
@@ -62,11 +59,12 @@ class TestFormat(TestCase):
     def test_draw(self):
         terminal = Terminal(force_styling=True)
         f = Format('blue')
-        self.assertEqual(f.draw('red', terminal), terminal.blue)
+        default = Format('red')
+        self.assertEqual(f.draw(terminal, default), terminal.blue)
         f = Format('normal')
         # FIXME: I'm not sure I like this behaviour any more... might be better
         # to have composable format things that we can pass around as 'normal'
-        self.assertEqual(f.draw('yellow', terminal), 'yellow')
+        self.assertEqual(f.draw(terminal, default), terminal.red)
 
     def test_equality(self):
         self.assertEqual(Format('foo'), Format('foo'))
@@ -108,9 +106,9 @@ class TestParameterizingFormat(TestCase):
     def test_draw(self):
         terminal = Terminal(force_styling=True)
         f = ParameterizingFormat('cup')  # Must be legit curses cap
-        self.assertEqual(f.draw('normal', terminal), terminal.cup)
+        self.assertEqual(f.draw(terminal), terminal.cup)
         f(1, 2)
-        self.assertEqual(f.draw('normal', terminal), terminal.cup(1, 2))
+        self.assertEqual(f.draw(terminal), terminal.cup(1, 2))
 
 
 class TestStringWithFormatting(TestCase):
@@ -131,7 +129,7 @@ class TestStringWithFormatting(TestCase):
     def test_draw(self):
         terminal = Terminal(force_styling=True)
         self.assertEqual(
-            self.swf.draw('normal', terminal),
+            self.swf.draw(terminal),
             'Hello {}World!'.format(terminal.blue))
 
     def test_equality(self):

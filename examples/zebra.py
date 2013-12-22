@@ -6,6 +6,6 @@ text3 = Text('A third line will help the logic become clearer')
 text3.min_height = 2
 content = [text1, text2, text3] * 10
 term = Terminal()
-zebra = Zebra(*content, odd_format=term.on_color(235))
+zebra = Zebra(*content, odd_format=Root.format.on_color(235))
 root = Root(zebra)
 root.run()

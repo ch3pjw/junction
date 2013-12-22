@@ -3,7 +3,6 @@ from abc import abstractmethod
 from .base import ABCUIElement
 from .root import Root
 from .util import clamp, crop_or_expand
-from .terminal import get_terminal
 from .formatting import StringWithFormatting, wrap
 
 
@@ -16,7 +15,8 @@ class ABCDisplayElement(ABCUIElement):
         'middle': 'middle',
         'bottom': 'end'}
 
-    def _draw(self, width, height, x, y, x_crop, y_crop):
+    def _draw(self, width, height, x, y, x_crop, y_crop, default_format,
+              terminal):
         '''Instuct the UI element to draw itself to the terminal.
 
         :parameter width: The width that the element must take up on the screen
@@ -35,15 +35,17 @@ class ABCDisplayElement(ABCUIElement):
             uese to crop the element to the right size (if None is specified,
             default, we will use this element's valign).
         '''
-        term = self.terminal or get_terminal()
         block = self._get_cropped_block(width, height)
         # Perform an additional crop with *different alignment* to resize the
         # UI element's rendered area text to the required area:
         block = self._do_crop(block, width, height, x_crop, y_crop)
-        term.draw_block(block, x, y, self.default_format)
+        terminal.draw_block(block, x, y, self.default_format or default_format)
 
-    def _update(self):
-        self._draw(*self._previous_geometry)
+    def _update(self, default_format, terminal):
+        self._draw(
+            *self._previous_geometry,
+            default_format=self.default_format or default_format,
+            terminal=terminal)
 
     @abstractmethod
     def _get_block(self, width, height):

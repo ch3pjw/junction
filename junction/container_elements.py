@@ -11,20 +11,21 @@ class ABCContainerElement(ABCUIElement):
         super().__init__(**kwargs)
         for element in elements:
             self.add_element(element)
+        self._root = None
         self._updated = True
 
     def __iter__(self):
         return iter(self._content)
 
     @property
-    def terminal(self):
-        return self._terminal or get_terminal()
+    def root(self):
+        return self._root
 
-    @terminal.setter
-    def terminal(self, terminal):
-        self._terminal = terminal
+    @root.setter
+    def root(self, root_element):
+        self._root = root_element
         for element in self:
-            element.terminal = terminal
+            element.root = root_element
 
     @property
     def updated(self):
@@ -43,7 +44,6 @@ class ABCContainerElement(ABCUIElement):
     def add_element(self, element):
         self._content.append(element)
         self._active_element = element
-        element.terminal = self.terminal
         element.root = self.root
 
     def remove_element(self, element):
@@ -51,17 +51,21 @@ class ABCContainerElement(ABCUIElement):
         if element is self._active_element:
             self._active_element = None
 
-    def _draw(self, width, height, x=0, y=0, x_crop=None, y_crop=None):
+    def _draw(self, width, height, x=0, y=0, x_crop=None, y_crop=None,
+              default_format=None, terminal=None):
         x_crop = x_crop or self._halign
         y_crop = y_crop or self._valign
         for element, width, height, x, y in (
                 self._get_elements_sizes_and_positions(width, height, x, y)):
             element.draw(
-                width, height, x, y, x_crop=x_crop, y_crop=y_crop)
+                width, height, x, y, x_crop=x_crop, y_crop=y_crop,
+                default_format=self.default_format or default_format,
+                # FIXME: not sure I like the get_terminal reference here...
+                terminal=terminal or get_terminal())
 
-    def _update(self):
+    def _update(self, default_format, terminal):
         for element in self:
-            element.update()
+            element.update(self.default_format or default_format, terminal)
 
 
 class Box(ABCContainerElement):
@@ -112,19 +116,18 @@ class Box(ABCContainerElement):
         yield self._active_element, width - 2, height - 2, x + 1, y + 1
 
     def _draw(self, width, height, x=0, y=0, *args, **kwargs):
-        super()._draw(width, height, x, y, *args, **kwargs)
+        terminal = kwargs.pop('terminal')
+        super()._draw(width, height, x, y, *args, terminal=terminal, **kwargs)
         top = [self._top_left + self._top * (width - 2) + self._top_right]
         left = [self._left] * (height - 2)
         bottom = [
             self._bottom_left + self._bottom * (width - 2) +
             self._bottom_right]
         right = [self._right] * (height - 2)
-        self.terminal.draw_block(top, x, y, self.default_format)
-        self.terminal.draw_block(left, x, y + 1, self.default_format)
-        self.terminal.draw_block(
-            bottom, x, y + height - 1, self.default_format)
-        self.terminal.draw_block(
-            right, x + width - 1, y + 1, self.default_format)
+        terminal.draw_block(top, x, y, self.default_format)
+        terminal.draw_block(left, x, y + 1, self.default_format)
+        terminal.draw_block(bottom, x, y + height - 1, self.default_format)
+        terminal.draw_block(right, x + width - 1, y + 1, self.default_format)
 
 
 class Stack(ABCContainerElement):
@@ -174,8 +177,8 @@ class Zebra(Stack):
     @property
     def _formats(self):
         return [
-            self.even_format or self.default_format or self.terminal._normal,
-            self.odd_format or self.default_format or self.terminal._normal]
+            self.even_format or self.default_format or None,
+            self.odd_format or self.default_format or None]
 
     def _get_elements_sizes_and_positions(self, width, height, x, y):
         parent = super()._get_elements_sizes_and_positions(
