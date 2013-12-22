@@ -1,7 +1,6 @@
 from abc import abstractmethod
 
-from .base import ABCUIElement
-from .terminal import get_terminal
+from .base import ABCUIElement, Block
 
 
 class ABCContainerElement(ABCUIElement):
@@ -52,20 +51,23 @@ class ABCContainerElement(ABCUIElement):
             self._active_element = None
 
     def _draw(self, width, height, x=0, y=0, x_crop=None, y_crop=None,
-              default_format=None, terminal=None):
+              default_format=None):
+        blocks = []
         x_crop = x_crop or self._halign
         y_crop = y_crop or self._valign
         for element, width, height, x, y in (
                 self._get_elements_sizes_and_positions(width, height, x, y)):
-            element.draw(
+            blocks.extend(element.draw(
                 width, height, x, y, x_crop=x_crop, y_crop=y_crop,
-                default_format=self.default_format or default_format,
-                # FIXME: not sure I like the get_terminal reference here...
-                terminal=terminal or get_terminal())
+                default_format=self.default_format or default_format))
+        return blocks
 
-    def _update(self, default_format, terminal):
+    def _update(self, default_format):
+        blocks = []
         for element in self:
-            element.update(self.default_format or default_format, terminal)
+            blocks.extend(element.update(
+                self.default_format or default_format))
+        return blocks
 
 
 class Box(ABCContainerElement):
@@ -116,18 +118,19 @@ class Box(ABCContainerElement):
         yield self._active_element, width - 2, height - 2, x + 1, y + 1
 
     def _draw(self, width, height, x=0, y=0, *args, **kwargs):
-        terminal = kwargs.pop('terminal')
-        super()._draw(width, height, x, y, *args, terminal=terminal, **kwargs)
+        blocks = super()._draw(width, height, x, y, *args, **kwargs)
         top = [self._top_left + self._top * (width - 2) + self._top_right]
         left = [self._left] * (height - 2)
         bottom = [
             self._bottom_left + self._bottom * (width - 2) +
             self._bottom_right]
         right = [self._right] * (height - 2)
-        terminal.draw_block(top, x, y, self.default_format)
-        terminal.draw_block(left, x, y + 1, self.default_format)
-        terminal.draw_block(bottom, x, y + height - 1, self.default_format)
-        terminal.draw_block(right, x + width - 1, y + 1, self.default_format)
+        blocks.extend([
+            Block(x, y, top, self.default_format),
+            Block(x, y + 1, left, self.default_format),
+            Block(x, y + height - 1, bottom, self.default_format),
+            Block(x + width - 1, y + 1, right, self.default_format)])
+        return blocks
 
 
 class Stack(ABCContainerElement):

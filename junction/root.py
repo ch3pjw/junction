@@ -71,12 +71,11 @@ class Root:
             self.loop.run_forever()
 
     def draw(self):
-        self.element.draw(
-            self.terminal.width, self.terminal.height,
-            default_format=self.default_format,
-            terminal=self.terminal)
+        blocks = self.element.draw(self.terminal.width, self.terminal.height)
+        self.terminal.draw_blocks(blocks)
         self.terminal.stream.flush()
 
     def update(self):
-        self.element.update(self.default_format, self.terminal)
+        blocks = self.element.update(self.default_format, self.terminal)
+        self.terminal.draw_blocks(blocks)
         self.terminal.stream.flush()

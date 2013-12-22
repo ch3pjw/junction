@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from .base import ABCUIElement
+from .base import ABCUIElement, Block
 from .root import Root
 from .util import clamp, crop_or_expand
 from .formatting import StringWithFormatting, wrap
@@ -15,8 +15,7 @@ class ABCDisplayElement(ABCUIElement):
         'middle': 'middle',
         'bottom': 'end'}
 
-    def _draw(self, width, height, x, y, x_crop, y_crop, default_format,
-              terminal):
+    def _draw(self, width, height, x, y, x_crop, y_crop, default_format):
         '''Instuct the UI element to draw itself to the terminal.
 
         :parameter width: The width that the element must take up on the screen
@@ -35,20 +34,19 @@ class ABCDisplayElement(ABCUIElement):
             uese to crop the element to the right size (if None is specified,
             default, we will use this element's valign).
         '''
-        block = self._get_cropped_block(width, height)
+        lines = self._get_cropped_lines(width, height)
         # Perform an additional crop with *different alignment* to resize the
         # UI element's rendered area text to the required area:
-        block = self._do_crop(block, width, height, x_crop, y_crop)
-        terminal.draw_block(block, x, y, self.default_format or default_format)
+        lines = self._do_crop(lines, width, height, x_crop, y_crop)
+        return [Block(x, y, lines, self.default_format or default_format)]
 
-    def _update(self, default_format, terminal):
-        self._draw(
+    def _update(self, default_format):
+        return self._draw(
             *self._previous_geometry,
-            default_format=self.default_format or default_format,
-            terminal=terminal)
+            default_format=self.default_format or default_format)
 
     @abstractmethod
-    def _get_block(self, width, height):
+    def _get_lines(self, width, height):
         '''Returns a list of individual lines that make up the display of the
         UI element.
         '''
@@ -65,13 +63,13 @@ class ABCDisplayElement(ABCUIElement):
                 scheme=self._scheme[x_crop])
         return lines
 
-    def _get_cropped_block(self, width, height):
+    def _get_cropped_lines(self, width, height):
         '''Sanitises the output from the element's _get_lines method to make
         sure that it is the correct shape according to width and height.
         '''
         full_width = clamp(width, min_=self.min_width, max_=self.max_width)
         full_height = clamp(height, min_=self.min_height, max_=self.max_height)
-        lines = self._get_block(full_width, full_height)
+        lines = self._get_lines(full_width, full_height)
         lines = self._do_crop(
             lines, full_width, full_height, self._halign, self._valign)
         return lines
@@ -82,7 +80,7 @@ class Fill(ABCDisplayElement):
         super().__init__(*args, **kwargs)
         self.char = char
 
-    def _get_block(self, width, height):
+    def _get_lines(self, width, height):
         return [self.char * width] * height
 
 
@@ -91,7 +89,7 @@ class Label(ABCDisplayElement):
         super().__init__(*args, **kwargs)
         self.content = content
 
-    def _get_block(self, width, height):
+    def _get_lines(self, width, height):
         return [self.content]
 
 
@@ -108,7 +106,7 @@ class Text(ABCDisplayElement):
     def content(self, value):
         self._content = value
 
-    def _get_block(self, width, height):
+    def _get_lines(self, width, height):
         lines = wrap(self.content, width)
         if any(isinstance(line, StringWithFormatting) for line in lines):
             lines[-1] += Root.format.normal
@@ -138,7 +136,7 @@ class ProgressBar(ABCDisplayElement):
         self._fraction = clamp(value, 0, 1)
         self.updated = True
 
-    def _get_block(self, width, height):
+    def _get_lines(self, width, height):
         width = max(width, self.min_width) - 2
         chars = [self._bg_char] * width
         filled = self._fraction * width

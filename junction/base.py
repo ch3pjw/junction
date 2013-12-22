@@ -8,6 +8,30 @@ Geometry = namedtuple(
     'Geometry', ['width', 'height', 'x', 'y', 'x_crop', 'y_crop'])
 
 
+class Block:
+    __slots__ = 'x', 'y', 'lines', 'default_format'
+
+    def __init__(self, x, y, lines, default_format):
+        self.x = x
+        self.y = y
+        self.lines = lines
+        self.default_format = default_format
+
+    def __repr__(self):
+        return 'Block({}, {}, {})'.format(self.x, self.y, self.lines)
+
+    def __eq__(self, other):
+        try:
+            return all(
+                getattr(self, attr_name) == getattr(other, attr_name) for
+                attr_name in self.__slots__)
+        except AttributeError:
+            return False
+
+    def __iter__(self):
+        return iter(self.lines)
+
+
 class ABCUIElement(metaclass=ABCMeta):
     min_width = None
     max_width = None
@@ -87,30 +111,29 @@ class ABCUIElement(metaclass=ABCMeta):
         self.updated = True
 
     def draw(self, width, height, x=0, y=0, x_crop='left', y_crop='top',
-             default_format=None, terminal=None):
-        if not terminal:
-            raise ValueError('termporary whilst refactoring')
-        self._draw(
-            width, height, x, y, x_crop, y_crop, default_format=default_format,
-            terminal=terminal)
+             default_format=None):
+        blocks = self._draw(
+            width, height, x, y, x_crop, y_crop, default_format=default_format)
         self._previous_geometry = Geometry(width, height, x, y, x_crop, y_crop)
         self.updated = False
+        return blocks
 
     @abstractmethod
-    def _draw(self, width, height, x, y, x_crop, y_crop, default_format,
-              terminal):
+    def _draw(self, width, height, x, y, x_crop, y_crop, default_format):
         pass
 
     def update(self, default_format=None, terminal=None):
+        blocks = []
         if self._previous_geometry is None:
             raise ValueError("draw() must be called on {!r} before it can be "
                              "updated".format(self))
         if self.updated:
-            self._update(default_format, terminal)
+            blocks.extend(self._update(default_format))
             self.updated = False
+        return blocks
 
     @abstractmethod
-    def _update(self, default_format, terminal):
+    def _update(self, default_format):
         pass
 
     #@abstractmethod

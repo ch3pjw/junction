@@ -18,7 +18,8 @@ class TestFormattingBehviour(TestCase):
     def test_default_formatting(self):
         fill = Fill()
         fill.default_format = Format('bold') + Format('green')
-        fill.draw(3, 1, terminal=self.terminal)
+        blocks = fill.draw(3, 1)
+        self.terminal.draw_blocks(blocks)
         self.assertEqual(
             self.stream.getvalue(),
             self.terminal.bold + self.terminal.green +

@@ -19,12 +19,12 @@ class TestDisplayElements(TestCase):
 
     def test_fill(self):
         fill = Fill()
-        self.assertEqual(fill._get_block(10, 0), [])
-        self.assertEqual(fill._get_block(10, 1), ['..........'])
-        self.assertEqual(fill._get_block(2, 2), ['..', '..'])
-        self.assertEqual(fill._get_block(0, 4), ['', '', '', ''])
+        self.assertEqual(fill._get_lines(10, 0), [])
+        self.assertEqual(fill._get_lines(10, 1), ['..........'])
+        self.assertEqual(fill._get_lines(2, 2), ['..', '..'])
+        self.assertEqual(fill._get_lines(0, 4), ['', '', '', ''])
         fill = Fill('o')
-        self.assertEqual(fill._get_block(1, 1), ['o'])
+        self.assertEqual(fill._get_lines(1, 1), ['o'])
 
     def test_text(self):
         content = 'The quick brown fox jumps over the lazy dog'
@@ -35,39 +35,39 @@ class TestDisplayElements(TestCase):
             'the lazy dog     ',
             '                 ']
         self.assertEqual(
-            text._get_cropped_block(17, 4), expected)
+            text._get_cropped_lines(17, 4), expected)
         text = Text(content, halign='center')
         expected = [
             ' The quick brown ',
             '  fox jumps over ',
             '   the lazy dog  ']
-        self.assertEqual(text._get_cropped_block(17, 3), expected)
+        self.assertEqual(text._get_cropped_lines(17, 3), expected)
         text = Text(content, halign='right')
         expected = [
             '  The quick brown fox jumps',
             '          over the lazy dog']
-        self.assertEqual(text._get_cropped_block(27, 2), expected)
+        self.assertEqual(text._get_cropped_lines(27, 2), expected)
         text = Text(content, valign='middle')
         expected = [
             ' ' * len(content),
             ' ' * len(content),
             content,
             ' ' * len(content)]
-        self.assertEqual(text._get_cropped_block(len(content), 4), expected)
+        self.assertEqual(text._get_cropped_lines(len(content), 4), expected)
         text = Text(content, valign='bottom')
         expected = [
             '                 ',
             'The quick brown  ',
             'fox jumps over   ',
             'the lazy dog     ']
-        self.assertEqual(text._get_cropped_block(17, 4), expected)
+        self.assertEqual(text._get_cropped_lines(17, 4), expected)
         text = Text(content, valign='bottom', fillchar='/')
         expected = [
             '/////////////////',
             'The quick brown//',
             'fox jumps over///',
             'the lazy dog/////']
-        self.assertEqual(text._get_cropped_block(17, 4), expected)
+        self.assertEqual(text._get_cropped_lines(17, 4), expected)
 
     def test_text_with_formatting(self):
         content = (
@@ -89,24 +89,24 @@ class TestDisplayElements(TestCase):
             # Root.format.normal + '     '),
             '                 ',
             '                 ']
-        actual = text._get_cropped_block(17, 4)
+        actual = text._get_cropped_lines(17, 4)
         self.assertEqual(actual, expected)
 
     def test_progress_bar(self):
         progress_bar = ProgressBar()
-        self.assertEqual(progress_bar._get_block(3, 1), ['[ ]'])
-        self.assertEqual(progress_bar._get_block(2, 1), ['[ ]'])
-        self.assertEqual(progress_bar._get_block(3, 0), ['[ ]'])
+        self.assertEqual(progress_bar._get_lines(3, 1), ['[ ]'])
+        self.assertEqual(progress_bar._get_lines(2, 1), ['[ ]'])
+        self.assertEqual(progress_bar._get_lines(3, 0), ['[ ]'])
         progress_bar.fraction = 0.5
         self.assertEqual(progress_bar.fraction, 0.5)
         self.assertTrue(progress_bar.updated)
         self.assertEqual(
-            progress_bar._get_block(10, 1), ['[====    ]'])
+            progress_bar._get_lines(10, 1), ['[====    ]'])
         progress_bar.fraction = 0.45
         self.assertEqual(
-            progress_bar._get_block(9, 1), ['[===-   ]'])
+            progress_bar._get_lines(9, 1), ['[===-   ]'])
         progress_bar.fraction = 1
-        self.assertEqual(progress_bar._get_block(9, 1), ['[=======]'])
+        self.assertEqual(progress_bar._get_lines(9, 1), ['[=======]'])
         progress_bar.fraction = 1.1
         self.assertEqual(progress_bar.fraction, 1)
         progress_bar.fraction = -0.1
@@ -115,17 +115,17 @@ class TestDisplayElements(TestCase):
     def test_progress_bar_unicode(self):
         progress_bar = ProgressBar(':*█:')
         progress_bar.fraction = 0.5
-        self.assertEqual(progress_bar._get_block(8, 1), [':███***:'])
+        self.assertEqual(progress_bar._get_lines(8, 1), [':███***:'])
 
     def test_custom_progress_bar(self):
         progress_bar = ProgressBar('()')
         progress_bar.fraction = 0.5
-        self.assertEqual(progress_bar._get_block(8, 1), ['[===   ]'])
+        self.assertEqual(progress_bar._get_lines(8, 1), ['[===   ]'])
         progress_bar = ProgressBar('(_-)')
         progress_bar.fraction = 0.5
-        self.assertEqual(progress_bar._get_block(8, 1), ['(---___)'])
+        self.assertEqual(progress_bar._get_lines(8, 1), ['(---___)'])
         progress_bar = ProgressBar('{ `\'"}')
         progress_bar.fraction = 0.45
-        self.assertEqual(progress_bar._get_block(9, 1), ['{"""`   }'])
+        self.assertEqual(progress_bar._get_lines(9, 1), ['{"""`   }'])
         progress_bar.fraction = 0.49
-        self.assertEqual(progress_bar._get_block(9, 1), ['{"""\'   }'])
+        self.assertEqual(progress_bar._get_lines(9, 1), ['{"""\'   }'])

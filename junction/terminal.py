@@ -134,6 +134,11 @@ class Terminal(blessings.Terminal):
         else:
             yield
 
+    def draw_blocks(self, blocks):
+        for block in blocks:
+            self.draw_block(
+                block.lines, block.x, block.y, block.default_format)
+
     def draw_block(self, block, x, y, default_format=None):
         if default_format is not None:
             self.stream.write(default_format.draw(self))

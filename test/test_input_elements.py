@@ -37,10 +37,10 @@ class TestInputElements(TestCase):
         terminal = Terminal(force_styling=True)
         line_input = LineInput('placeholder text')
         line_input.root = Mock()
-        block = line_input._get_block(0, 0)
+        block = line_input._get_lines(0, 0)
         self.assertEqual(block, ['placeholder text'])
         for char in 'some important input':
             line_input.handle_input(char)
-        block = line_input._get_block(0, 0)
+        block = line_input._get_lines(0, 0)
         self.assertEqual(
             block, ['some important input' + terminal.reverse(' ')])

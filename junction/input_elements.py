@@ -113,7 +113,7 @@ class LineInput(ABCDisplayElement):
         # FIXME: this is a temporary hack to try proof of concept
         self.root.update()
 
-    def _get_block(self, width, height):
+    def _get_lines(self, width, height):
         if self.line_buffer:
             return [self.line_buffer.draw()]
         else:

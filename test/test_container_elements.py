@@ -5,6 +5,7 @@ import asyncio
 
 from junction.terminal import Terminal
 from junction.root import Root
+from junction.base import Block
 from junction.display_elements import Fill, ABCDisplayElement
 from junction.container_elements import Box, Stack, Zebra
 
@@ -70,24 +71,22 @@ class TestContainerElements(TestCase):
     def test_box(self):
         fill = Fill()
         box = Box(fill)
-        box.draw(4, 4, terminal=self.terminal)
-        self.terminal.draw_block.assert_has_calls([
-            call(['..', '..'], 1, 1, box.default_format),
-            call(['+--+'], 0, 0, box.default_format),
-            call(['|', '|'], 0, 1, box.default_format),
-            call(['|', '|'], 3, 1, box.default_format),
-            call(['+--+'], 0, 3, box.default_format)],
-            any_order=True)
+        blocks = box.draw(4, 4)
+        self.assertCountEqual(blocks, [
+            Block(1, 1, ['..', '..'], box.default_format),
+            Block(0, 0, ['+--+'], box.default_format),
+            Block(0, 1, ['|', '|'], box.default_format),
+            Block(3, 1, ['|', '|'], box.default_format),
+            Block(0, 3, ['+--+'], box.default_format)])
         self.terminal.draw_block.reset_mock()
         box = Box(fill, chars='╓─┐│┘─╙║')
-        box.draw(3, 3, terminal=self.terminal)
-        self.terminal.draw_block.assert_has_calls([
-            call(['.'], 1, 1, box.default_format),
-            call(['╓─┐'], 0, 0, box.default_format),
-            call(['║'], 0, 1, box.default_format),
-            call(['│'], 2, 1, box.default_format),
-            call(['╙─┘'], 0, 2, box.default_format)],
-            any_order=True)
+        blocks = box.draw(3, 3)
+        self.assertCountEqual(blocks, [
+            Block(1, 1, ['.'], box.default_format),
+            Block(0, 0, ['╓─┐'], box.default_format),
+            Block(0, 1, ['║'], box.default_format),
+            Block(2, 1, ['│'], box.default_format),
+            Block(0, 2, ['╙─┘'], box.default_format)])
         box = Box(fill, chars='[]')
         self.assertEqual(box.chars, '+-+|+-+|')
 
@@ -117,40 +116,34 @@ class TestContainerElements(TestCase):
         fill2.default_format = 'more like two'
         fill2.min_height = 2
         stack = Stack(fill1, fill2)
-        stack.draw(5, 4, terminal=self.terminal)
-        self.terminal.draw_block.assert_has_calls([
-            call(['11111'], 0, 0, fill1.default_format),
-            call(['22222', '22222'], 0, 1, fill2.default_format)])
-        self.terminal.draw_block.reset_mock()
+        blocks = stack.draw(5, 4)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['11111'], fill1.default_format),
+            Block(0, 1, ['22222', '22222'], fill2.default_format)])
         self.assertIsNone(stack.min_width)
-        stack.draw(3, 2, terminal=self.terminal)
-        self.terminal.draw_block.assert_has_calls([
-            call(['111'], 0, 0, fill1.default_format),
-            call(['222'], 0, 1, fill2.default_format)])
-        self.terminal.draw_block.reset_mock()
-        stack.draw(4, 1, terminal=self.terminal)
-        self.terminal.draw_block.assert_has_calls([
-            call(['1111'], 0, 0, fill1.default_format)])
-        self.terminal.draw_block.reset_mock()
+        blocks = stack.draw(3, 2)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['111'], fill1.default_format),
+            Block(0, 1, ['222'], fill2.default_format)])
+        blocks = stack.draw(4, 1)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['1111'], fill1.default_format)])
         stack.valign = 'bottom'
-        stack.draw(3, 2, terminal=self.terminal)
-        self.terminal.draw_block.assert_has_calls([
-            call(['222', '222'], 0, 0, fill2.default_format)])
-        self.terminal.draw_block.reset_mock()
+        blocks = stack.draw(3, 2)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['222', '222'], fill2.default_format)])
         fill3 = Fill('3', name='3')
         stack.add_element(fill3)
-        stack.draw(5, 4, terminal=self.terminal)
-        self.terminal.draw_block.assert_has_calls([
-            call(['33333'], 0, 3, fill3.default_format),
-            call(['22222', '22222'], 0, 1, fill2.default_format),
-            call(['11111'], 0, 0, fill1.default_format)])
-        self.terminal.draw_block.reset_mock()
+        blocks = stack.draw(5, 4)
+        self.assertEqual(blocks, [
+            Block(0, 3, ['33333'], fill3.default_format),
+            Block(0, 1, ['22222', '22222'], fill2.default_format),
+            Block(0, 0, ['11111'], fill1.default_format)])
         stack.remove_element(fill2)
-        stack.draw(5, 4, terminal=self.terminal)
-        self.terminal.draw_block.assert_has_calls([
-            call(['33333'], 0, 3, fill3.default_format),
-            call(['11111'], 0, 2, fill1.default_format)])
-        self.terminal.draw_block.reset_mock()
+        blocks = stack.draw(5, 4)
+        self.assertEqual(blocks, [
+            Block(0, 3, ['33333'], fill3.default_format),
+            Block(0, 2, ['11111'], fill1.default_format)])
 
     def test_zebra(self):
         fill1 = Fill()
@@ -159,28 +152,26 @@ class TestContainerElements(TestCase):
         zebra = Zebra(
             fill1, fill1, fill1, fill2, fill1, even_format='hello',
             odd_format='world')
-        zebra.draw(3, 10, terminal=self.terminal)
-        self.terminal.draw_block.assert_has_calls([
-            call(['...'], 0, 0, 'hello'),
-            call(['...'], 0, 1, 'world'),
-            call(['...'], 0, 2, 'hello'),
-            call([',,,', ',,,'], 0, 3, 'world'),
-            call(['...'], 0, 5, 'hello')])
-        self.terminal.draw_block.reset_mock()
+        blocks = zebra.draw(3, 10)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['...'], 'hello'),
+            Block(0, 1, ['...'], 'world'),
+            Block(0, 2, ['...'], 'hello'),
+            Block(0, 3, [',,,', ',,,'], 'world'),
+            Block(0, 5, ['...'], 'hello')])
         zebra.even_format = None
-        zebra.draw(3, 10, terminal=self.terminal)
-        self.terminal.draw_block.assert_has_calls([
-            call(['...'], 0, 0, None),
-            call(['...'], 0, 1, 'world'),
-            call(['...'], 0, 2, None),
-            call([',,,', ',,,'], 0, 3, 'world'),
-            call(['...'], 0, 5, None)])
-        self.terminal.draw_block.reset_mock()
+        blocks = zebra.draw(3, 10)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['...'], None),
+            Block(0, 1, ['...'], 'world'),
+            Block(0, 2, ['...'], None),
+            Block(0, 3, [',,,', ',,,'], 'world'),
+            Block(0, 5, ['...'], None)])
         zebra.default_format = 'norm'
-        zebra.draw(3, 10, terminal=self.terminal)
-        self.terminal.draw_block.assert_has_calls([
-            call(['...'], 0, 0, 'norm'),
-            call(['...'], 0, 1, 'world'),
-            call(['...'], 0, 2, 'norm'),
-            call([',,,', ',,,'], 0, 3, 'world'),
-            call(['...'], 0, 5, 'norm')])
+        blocks = zebra.draw(3, 10)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['...'], 'norm'),
+            Block(0, 1, ['...'], 'world'),
+            Block(0, 2, ['...'], 'norm'),
+            Block(0, 3, [',,,', ',,,'], 'world'),
+            Block(0, 5, ['...'], 'norm')])
