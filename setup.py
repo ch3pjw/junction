@@ -11,7 +11,8 @@ setup(
     name='junction',
     version=__version__,
     install_requires=[
-        'blessings'],
+        'blessings',
+        'asyncio'],
     packages=[
         'junction'],
     extras_require={
