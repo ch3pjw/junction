@@ -3,7 +3,7 @@ from io import StringIO
 
 from junction.formatting import (
     Format, ParameterizingFormat, StringWithFormatting, TextWrapper, wrap)
-from junction import Terminal, Fill
+from junction import Root, Terminal, Fill
 
 long_swf = (
     '  This is a    rather ' + Format('bold') + 'loooong ' + Format('normal') +
@@ -19,7 +19,7 @@ class TestFormattingBehviour(TestCase):
         fill = Fill()
         fill.default_format = Format('bold') + Format('green')
         blocks = fill.draw(3, 1)
-        self.terminal.draw_blocks(blocks)
+        self.terminal.draw_blocks(blocks, {})
         self.assertEqual(
             self.stream.getvalue(),
             self.terminal.bold + self.terminal.green +
@@ -87,6 +87,40 @@ class TestFormat(TestCase):
         self.assertIs(f.split()[0], f)
 
 
+class TestStyle(TestCase):
+    def setUp(self):
+        self.styles = {
+            'heading': Root.format.underline,
+            'h1': Root.style.heading,
+            'h2': Root.style.heading + Root.format.color(230)}
+        self.terminal = Terminal(force_styling=True)
+
+    def test_simple_style(self):
+        test_style_string = (
+            Root.style.heading('Something very important:') +
+            'That you must not forget')
+        result = test_style_string.draw(self.styles, self.terminal)
+        self.assertEqual(
+            result,
+            self.terminal.underline + 'Something very important:' +
+            self.terminal.normal + 'That you must not forget')
+
+    def test_style_referencing_style(self):
+        test_style_string = Root.style.h1 + 'Most important thing'
+        result = test_style_string.draw(self.styles, self.terminal)
+        self.assertEqual(
+            result,
+            self.terminal.underline + 'Most important thing')
+
+    def test_compound_style(self):
+        test_style_string = Root.style.h2('Not so important') + 'thing'
+        result = test_style_string.draw(self.styles, self.terminal)
+        self.assertEqual(
+            result,
+            self.terminal.underline + self.terminal.color(230) +
+            'Not so important' + self.terminal.normal + 'thing')
+
+
 class TestParameterizingFormat(TestCase):
     def test_repr(self):
         f = ParameterizingFormat('something')
@@ -130,7 +164,7 @@ class TestStringWithFormatting(TestCase):
     def test_draw(self):
         terminal = Terminal(force_styling=True)
         self.assertEqual(
-            self.swf.draw(terminal),
+            self.swf.draw({}, terminal),
             'Hello {}World!'.format(terminal.blue))
 
     def test_equality(self):

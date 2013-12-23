@@ -2,12 +2,13 @@ import asyncio
 import signal
 from contextlib import contextmanager
 
-from .formatting import FormatFactory
+from .formatting import FormatFactory, StyleFactory
 from .terminal import get_terminal, Keyboard
 
 
 class Root:
     format = FormatFactory()
+    style = StyleFactory()
 
     def __init__(self, element=None, styles=None, terminal=None, loop=None):
         '''Represents the root element of a tree of UI elements. We are
@@ -29,6 +30,7 @@ class Root:
         self._element = None
         if element:
             self.element = element
+        self.styles = styles
         self.terminal = terminal or get_terminal()
         self.loop = loop or asyncio.get_event_loop()
         self.keyboard = Keyboard()
@@ -70,12 +72,14 @@ class Root:
             self.draw()
             self.loop.run_forever()
 
+    def _do_draw(self, blocks):
+        self.terminal.draw_blocks(blocks, self.styles)
+        self.terminal.stream.flush()
+
     def draw(self):
         blocks = self.element.draw(self.terminal.width, self.terminal.height)
-        self.terminal.draw_blocks(blocks)
-        self.terminal.stream.flush()
+        self._do_draw(blocks)
 
     def update(self):
         blocks = self.element.update(self.default_format, self.terminal)
-        self.terminal.draw_blocks(blocks)
-        self.terminal.stream.flush()
+        self._do_draw(blocks)

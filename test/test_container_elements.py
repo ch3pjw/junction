@@ -37,7 +37,7 @@ class TestContainerElements(TestCase):
             loop.call_soon(loop.stop)
             root.run()
         self.terminal.draw_block.assert_called_with(
-            ['....', '....', '....'], 0, 0, fill.default_format)
+            ['....', '....', '....'], 0, 0, fill.default_format, None)
         fill2 = Fill()
         root.element = fill2
         self.assertIsNone(fill.root)
@@ -58,15 +58,15 @@ class TestContainerElements(TestCase):
                 'junction.Terminal.height', 2):
             root.draw()
         self.terminal.draw_block.assert_has_calls([
-            call(['11'], 0, 0, fill1.default_format),
-            call(['22'], 0, 1, fill2.default_format)])
+            call(['11'], 0, 0, fill1.default_format, None),
+            call(['22'], 0, 1, fill2.default_format, None)])
         self.terminal.draw_block.reset_mock()
         root.update()
         self.assertEqual(self.terminal.draw_block.call_count, 0)
         fill2.updated = True
         root.update()
         self.terminal.draw_block.assert_called_once_with(
-            ['22'], 0, 1, fill2.default_format)
+            ['22'], 0, 1, fill2.default_format, None)
 
     def test_box(self):
         fill = Fill()

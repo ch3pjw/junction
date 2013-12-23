@@ -134,18 +134,21 @@ class Terminal(blessings.Terminal):
         else:
             yield
 
-    def draw_blocks(self, blocks):
+    def draw_blocks(self, blocks, styles):
         for block in blocks:
             self.draw_block(
-                block.lines, block.x, block.y, block.default_format)
+                block.lines, block.x, block.y, block.default_format, styles)
 
-    def draw_block(self, block, x, y, default_format=None):
+    def draw_block(self, block, x, y, default_format=None, styles=None):
+        # FIXME: this should be unnecessary as a function once I've fixed up
+        # the unit tests, and it's now misnamed, because a block is now an
+        # object...
         if default_format is not None:
-            self.stream.write(default_format.draw(self))
+            self.stream.write(default_format.draw(styles, self))
         for y, line in enumerate(block, start=y):
             self.stream.write(self.move(y, x))
             if isinstance(line, StringWithFormatting):
-                line = line.draw(self, default_format)
+                line = line.draw(self, default_format, styles)
             self.stream.write(line)
         if default_format is not None:
             self.stream.write(self.normal)

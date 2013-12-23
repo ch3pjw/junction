@@ -122,6 +122,35 @@ class FormatFactory:
             return Format(attr_name)
 
 
+class Style(LazyLookup):
+    def do_lookup(self, styles):
+        return styles.get(self.attr_name, Format(''))
+
+    def __call__(self, content_string):
+        return self + content_string + Format('normal')
+
+    def draw(self, styles, terminal):
+        '''Recursively resolves a style to its actual escape sequence.
+        '''
+        style = self.do_lookup(styles)
+        if isinstance(style, Format):
+            return style.draw(terminal)
+        elif isinstance(style, Style):
+            return style.draw(styles, terminal)
+        elif isinstance(style, StringWithFormatting):
+            return style.draw(styles, terminal)
+
+
+class StyleFactory:
+    __slots__ = []  # Ensure noone can store arbitrary attributes on us
+
+    def __getattr__(self, attr_name):
+        return self.get_style(attr_name)
+
+    def get_style(self, attr_name):
+        return Style(attr_name)
+
+
 class StringWithFormatting:
     __slots__ = ['_content']
 
@@ -244,16 +273,19 @@ class StringWithFormatting:
         else:
             return str(self)[index]
 
-    def _iter_for_draw(self, terminal, default_format):
+    def _iter_for_draw(self, styles, terminal, default_format):
         for string in self._content:
             if isinstance(string, Format):
                 yield string.draw(terminal, default_format)
+            elif isinstance(string, Style):
+                yield string.draw(styles, terminal)
             else:
                 yield string
 
-    def draw(self, terminal, default_format=None):
+    def draw(self, styles, terminal, default_format=None):
         return ''.join(
-            string for string in self._iter_for_draw(terminal, default_format))
+            string for string in self._iter_for_draw(
+                styles, terminal, default_format))
 
 
 class TextWrapper:
