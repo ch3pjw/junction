@@ -22,7 +22,7 @@ class DisplayElementForTest(ABCDisplayElement):
 class TestContainerElements(TestCase):
     def setUp(self):
         self.terminal = Terminal()
-        patcher = patch.object(self.terminal, 'draw_block', autospec=True)
+        patcher = patch.object(self.terminal, 'draw_lines', autospec=True)
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -36,7 +36,7 @@ class TestContainerElements(TestCase):
             root = Root(fill, terminal=self.terminal, loop=loop)
             loop.call_soon(loop.stop)
             root.run()
-        self.terminal.draw_block.assert_called_with(
+        self.terminal.draw_lines.assert_called_with(
             ['....', '....', '....'], 0, 0, fill.default_format, None)
         fill2 = Fill()
         root.element = fill2
@@ -57,15 +57,15 @@ class TestContainerElements(TestCase):
         with patch('junction.Terminal.width', 2), patch(
                 'junction.Terminal.height', 2):
             root.draw()
-        self.terminal.draw_block.assert_has_calls([
+        self.terminal.draw_lines.assert_has_calls([
             call(['11'], 0, 0, fill1.default_format, None),
             call(['22'], 0, 1, fill2.default_format, None)])
-        self.terminal.draw_block.reset_mock()
+        self.terminal.draw_lines.reset_mock()
         root.update()
-        self.assertEqual(self.terminal.draw_block.call_count, 0)
+        self.assertEqual(self.terminal.draw_lines.call_count, 0)
         fill2.updated = True
         root.update()
-        self.terminal.draw_block.assert_called_once_with(
+        self.terminal.draw_lines.assert_called_once_with(
             ['22'], 0, 1, fill2.default_format, None)
 
     def test_box(self):
@@ -78,7 +78,6 @@ class TestContainerElements(TestCase):
             Block(0, 1, ['|', '|'], box.default_format),
             Block(3, 1, ['|', '|'], box.default_format),
             Block(0, 3, ['+--+'], box.default_format)])
-        self.terminal.draw_block.reset_mock()
         box = Box(fill, chars='╓─┐│┘─╙║')
         blocks = box.draw(3, 3)
         self.assertCountEqual(blocks, [

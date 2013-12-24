@@ -73,7 +73,10 @@ class Root:
             self.loop.run_forever()
 
     def _do_draw(self, blocks):
-        self.terminal.draw_blocks(blocks, self.styles)
+        for block in blocks:
+            self.terminal.draw_lines(
+                block.lines, block.x, block.y, block.default_format,
+                self.styles)
         self.terminal.stream.flush()
 
     def draw(self):

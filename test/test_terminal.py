@@ -91,7 +91,7 @@ class TestTerminal(TestCase):
         self.maxDiff = 0  # protect from difficult terminal output on failure
         blessings_term = blessings.Terminal(force_styling=True)
         test_term = Terminal(stream=StringIO(), force_styling=True)
-        test_term.draw_block(['hello', 'world'], x=3, y=4)
+        test_term.draw_lines(['hello', 'world'], x=3, y=4)
         self.assertEqual(
             test_term.stream.getvalue(),
             blessings_term.move(4, 3) + 'hello' +

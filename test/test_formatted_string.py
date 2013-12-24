@@ -1,4 +1,5 @@
 from unittest import TestCase
+from mock import patch
 from io import StringIO
 
 from junction.formatting import (
@@ -18,8 +19,10 @@ class TestFormattingBehviour(TestCase):
     def test_default_formatting(self):
         fill = Fill()
         fill.default_format = Format('bold') + Format('green')
-        blocks = fill.draw(3, 1)
-        self.terminal.draw_blocks(blocks, {})
+        root = Root(fill, terminal=self.terminal)
+        with patch('junction.Terminal.width', 3), patch(
+                'junction.Terminal.height', 1):
+            root.draw()
         self.assertEqual(
             self.stream.getvalue(),
             self.terminal.bold + self.terminal.green +
