@@ -58,14 +58,11 @@ class Format(LazyLookup):
     def __call__(self, content_string):
         return self + content_string + self.__class__('normal')
 
-    def draw(self, terminal, default_format=None):
-        if default_format and self.attr_name == 'normal':
-            return default_format.draw(terminal)
+    def draw(self, terminal, default_escape_sequence=''):
+        if default_escape_sequence and self.attr_name == 'normal':
+            return default_escape_sequence
         else:
             formatting_string = self.do_lookup(terminal)
-            # FIXME: I'm not sure this is necessary:
-            if default_format:
-                formatting_string._normal = default_format.draw(terminal)
             return formatting_string
 
 
@@ -113,7 +110,10 @@ class FormatFactory:
     __slots__ = []  # Ensure noone can store arbitrary attributes on us
 
     def __getattr__(self, attr_name):
-        return self.get_format(attr_name)
+        if attr_name == '__isabstractmethod__':
+            return False
+        else:
+            return self.get_format(attr_name)
 
     def get_format(self, attr_name):
         if attr_name in ('color', 'on_color'):
@@ -135,9 +135,7 @@ class Style(LazyLookup):
         style = self.do_lookup(styles)
         if isinstance(style, Format):
             return style.draw(terminal)
-        elif isinstance(style, Style):
-            return style.draw(styles, terminal)
-        elif isinstance(style, StringWithFormatting):
+        elif isinstance(style, (Style, StringWithFormatting)):
             return style.draw(styles, terminal)
 
 
@@ -145,7 +143,10 @@ class StyleFactory:
     __slots__ = []  # Ensure noone can store arbitrary attributes on us
 
     def __getattr__(self, attr_name):
-        return self.get_style(attr_name)
+        if attr_name == '__isabstractmethod__':
+            return False
+        else:
+            return self.get_style(attr_name)
 
     def get_style(self, attr_name):
         return Style(attr_name)
@@ -157,7 +158,7 @@ class StringWithFormatting:
     def __init__(self, content):
         if isinstance(content, self.__class__):
             self._content = content._content
-        elif isinstance(content, str):
+        elif isinstance(content, (str, LazyLookup)):
             self._content = tuple([content])
         else:
             self._content = tuple(content)
@@ -273,14 +274,27 @@ class StringWithFormatting:
         else:
             return str(self)[index]
 
+    def _populate_placeholder(
+            self, placeholder, styles, terminal, default_escape_sequence=''):
+        '''Will ask a placeholder to populate itself, giving it the right
+        information.
+        '''
+        if isinstance(placeholder, Format):
+            return placeholder.draw(terminal, default_escape_sequence)
+        elif isinstance(placeholder, Style):
+            return placeholder.draw(styles, terminal)
+        else:
+            return placeholder
+
     def _iter_for_draw(self, styles, terminal, default_format):
+        if default_format:
+            default_escape_sequence = self._populate_placeholder(
+                default_format, styles, terminal)
+        else:
+            default_escape_sequence = ''
         for string in self._content:
-            if isinstance(string, Format):
-                yield string.draw(terminal, default_format)
-            elif isinstance(string, Style):
-                yield string.draw(styles, terminal)
-            else:
-                yield string
+            yield self._populate_placeholder(
+                string, styles, terminal, default_escape_sequence)
 
     def draw(self, styles, terminal, default_format=None):
         return ''.join(

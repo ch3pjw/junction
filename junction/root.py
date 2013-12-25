@@ -2,11 +2,12 @@ import asyncio
 import signal
 from contextlib import contextmanager
 
+from .base import ABCUIElement
 from .formatting import FormatFactory, StyleFactory
 from .terminal import get_terminal, Keyboard
 
 
-class Root:
+class Root(ABCUIElement):
     format = FormatFactory()
     style = StyleFactory()
 
@@ -27,6 +28,7 @@ class Root:
             method. (Optional, we will grab a default if none is provided, and
             the loop can be reassigned so long as we're not currently running.)
         '''
+        super().__init__()
         self._element = None
         if element:
             self.element = element
@@ -34,7 +36,6 @@ class Root:
         self.terminal = terminal or get_terminal()
         self.loop = loop or asyncio.get_event_loop()
         self.keyboard = Keyboard()
-        self.default_format = None
 
     @property
     def element(self):
@@ -72,17 +73,17 @@ class Root:
             self.draw()
             self.loop.run_forever()
 
-    def _do_draw(self, blocks):
-        for block in blocks:
-            self.terminal.draw_lines(
-                block.lines, block.x, block.y, block.default_format,
-                self.styles)
-        self.terminal.stream.flush()
-
     def draw(self):
-        blocks = self.element.draw(self.terminal.width, self.terminal.height)
-        self._do_draw(blocks)
+        super().draw(
+            self.terminal.width, self.terminal.height, terminal=self.terminal,
+            styles=self.styles)
 
     def update(self):
-        blocks = self.element.update(self.default_format, self.terminal)
-        self._do_draw(blocks)
+        super().update(
+            self.default_format, terminal=self.terminal, styles=self.styles)
+
+    def _get_all_blocks(self, *args, **kwargs):
+        return self.element.get_all_blocks(*args, **kwargs)
+
+    def _get_updated_blocks(self, *args, **kwargs):
+        return self.element.get_updated_blocks(*args, **kwargs)

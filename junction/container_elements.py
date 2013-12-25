@@ -50,22 +50,23 @@ class ABCContainerElement(ABCUIElement):
         if element is self._active_element:
             self._active_element = None
 
-    def _draw(self, width, height, x=0, y=0, x_crop=None, y_crop=None,
-              default_format=None):
+    def _get_all_blocks(
+            self, width, height, x=0, y=0, x_crop=None, y_crop=None,
+            default_format=None):
         blocks = []
         x_crop = x_crop or self._halign
         y_crop = y_crop or self._valign
         for element, width, height, x, y in (
                 self._get_elements_sizes_and_positions(width, height, x, y)):
-            blocks.extend(element.draw(
+            blocks.extend(element.get_all_blocks(
                 width, height, x, y, x_crop=x_crop, y_crop=y_crop,
                 default_format=self.default_format or default_format))
         return blocks
 
-    def _update(self, default_format):
+    def _get_updated_blocks(self, default_format):
         blocks = []
         for element in self:
-            blocks.extend(element.update(
+            blocks.extend(element.get_updated_blocks(
                 self.default_format or default_format))
         return blocks
 
@@ -117,8 +118,8 @@ class Box(ABCContainerElement):
     def _get_elements_sizes_and_positions(self, width, height, x, y):
         yield self._active_element, width - 2, height - 2, x + 1, y + 1
 
-    def _draw(self, width, height, x=0, y=0, *args, **kwargs):
-        blocks = super()._draw(width, height, x, y, *args, **kwargs)
+    def _get_all_blocks(self, width, height, x=0, y=0, *args, **kwargs):
+        blocks = super()._get_all_blocks(width, height, x, y, *args, **kwargs)
         top = [self._top_left + self._top * (width - 2) + self._top_right]
         left = [self._left] * (height - 2)
         bottom = [

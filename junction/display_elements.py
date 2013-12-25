@@ -15,33 +15,8 @@ class ABCDisplayElement(ABCUIElement):
         'middle': 'middle',
         'bottom': 'end'}
 
-    def _draw(self, width, height, x, y, x_crop, y_crop, default_format):
-        '''Instuct the UI element to draw itself to the terminal.
-
-        :parameter width: The width that the element must take up on the screen
-            (if the underlying code failes to provide the correctly sized data,
-            we will take measures to adjust it).
-        :parameter height: The height that the element must take up on the
-            screen.
-        :parameter x: an optional x location at which to draw the UI element,
-            default=0.
-        :parameter y: an optional y location at which to draw the UI element,
-            default=0.
-        :parameter x_crop: If width < min_width, the alignment that will be
-            used to crop the element to the right size (if None is specified,
-            default, we will use this element's halign).
-        :parameter y_crop: If height < min_height, the alignment that will be
-            uese to crop the element to the right size (if None is specified,
-            default, we will use this element's valign).
-        '''
-        lines = self._get_cropped_lines(width, height)
-        # Perform an additional crop with *different alignment* to resize the
-        # UI element's rendered area text to the required area:
-        lines = self._do_crop(lines, width, height, x_crop, y_crop)
-        return [Block(x, y, lines, self.default_format or default_format)]
-
-    def _update(self, default_format):
-        return self._draw(
+    def _get_updated_blocks(self, default_format):
+        return self.get_all_blocks(
             *self._previous_geometry,
             default_format=self.default_format or default_format)
 
@@ -63,16 +38,17 @@ class ABCDisplayElement(ABCUIElement):
                 scheme=self._scheme[x_crop])
         return lines
 
-    def _get_cropped_lines(self, width, height):
-        '''Sanitises the output from the element's _get_lines method to make
-        sure that it is the correct shape according to width and height.
-        '''
+    def _get_all_blocks(
+            self, width, height, x, y, x_crop, y_crop, default_format):
         full_width = clamp(width, min_=self.min_width, max_=self.max_width)
         full_height = clamp(height, min_=self.min_height, max_=self.max_height)
         lines = self._get_lines(full_width, full_height)
         lines = self._do_crop(
             lines, full_width, full_height, self._halign, self._valign)
-        return lines
+        # Perform an additional crop with *different alignment* to resize the
+        # UI element's rendered area text to the required area:
+        lines = self._do_crop(lines, width, height, x_crop, y_crop)
+        return [Block(x, y, lines, self.default_format or default_format)]
 
 
 class Fill(ABCDisplayElement):

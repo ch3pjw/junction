@@ -35,39 +35,40 @@ class TestDisplayElements(TestCase):
             'the lazy dog     ',
             '                 ']
         self.assertEqual(
-            text._get_cropped_lines(17, 4), expected)
+            text.get_all_blocks(17, 4)[0].lines, expected)
         text = Text(content, halign='center')
         expected = [
             ' The quick brown ',
             '  fox jumps over ',
             '   the lazy dog  ']
-        self.assertEqual(text._get_cropped_lines(17, 3), expected)
+        self.assertEqual(text.get_all_blocks(17, 3)[0].lines, expected)
         text = Text(content, halign='right')
         expected = [
             '  The quick brown fox jumps',
             '          over the lazy dog']
-        self.assertEqual(text._get_cropped_lines(27, 2), expected)
+        self.assertEqual(text.get_all_blocks(27, 2)[0].lines, expected)
         text = Text(content, valign='middle')
         expected = [
             ' ' * len(content),
             ' ' * len(content),
             content,
             ' ' * len(content)]
-        self.assertEqual(text._get_cropped_lines(len(content), 4), expected)
+        self.assertEqual(
+            text.get_all_blocks(len(content), 4)[0].lines, expected)
         text = Text(content, valign='bottom')
         expected = [
             '                 ',
             'The quick brown  ',
             'fox jumps over   ',
             'the lazy dog     ']
-        self.assertEqual(text._get_cropped_lines(17, 4), expected)
+        self.assertEqual(text.get_all_blocks(17, 4)[0].lines, expected)
         text = Text(content, valign='bottom', fillchar='/')
         expected = [
             '/////////////////',
             'The quick brown//',
             'fox jumps over///',
             'the lazy dog/////']
-        self.assertEqual(text._get_cropped_lines(17, 4), expected)
+        self.assertEqual(text.get_all_blocks(17, 4)[0].lines, expected)
 
     def test_text_with_formatting(self):
         content = (
@@ -89,7 +90,7 @@ class TestDisplayElements(TestCase):
             # Root.format.normal + '     '),
             '                 ',
             '                 ']
-        actual = text._get_cropped_lines(17, 4)
+        actual = text.get_all_blocks(17, 4)[0].lines
         self.assertEqual(actual, expected)
 
     def test_progress_bar(self):

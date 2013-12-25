@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 
 from .terminal import get_terminal
+from .formatting import StringWithFormatting
 
 
 Geometry = namedtuple(
@@ -115,29 +116,63 @@ class ABCUIElement(metaclass=ABCMeta):
         self.updated = True
 
     def draw(self, width, height, x=0, y=0, x_crop='left', y_crop='top',
-             default_format=None):
-        blocks = self._draw(
+             default_format=None, terminal=None, styles=None):
+        blocks = self.get_all_blocks(
             width, height, x, y, x_crop, y_crop, default_format=default_format)
+        self._do_draw(blocks, terminal, styles)
+
+    def update(self, default_format=None, terminal=None, styles=None):
+        blocks = self.get_updated_blocks(default_format)
+        self._do_draw(blocks, terminal, styles)
+
+    def _do_draw(self, blocks, terminal, styles):
+        terminal = terminal or get_terminal()
+        styles = styles or {}
+        for block in blocks:
+            lines = self._populate_lines(
+                block.lines, terminal, styles, block.default_format)
+            terminal.draw_lines(lines, block.x, block.y)
+        terminal.stream.flush()
+
+    def _populate_lines(self, lines, terminal, styles, default_format):
+        '''Takes some lines to draw to the terminal, which may contain
+        formatting placeholder objects, and inserts the appropriate concrete
+        escapes sequences by using data from the terminal object and styles
+        dictionary.
+        '''
+        for i, line in enumerate(lines):
+            if default_format is not None and i == 0:
+                line = default_format + line
+            if isinstance(line, StringWithFormatting):
+                line = line.draw(styles, terminal, default_format)
+            yield line
+
+    def get_all_blocks(
+            self, width, height, x=0, y=0, x_crop='left', y_crop='top',
+            default_format=None):
+        blocks = self._get_all_blocks(
+            width, height, x, y, x_crop, y_crop, default_format)
         self._previous_geometry = Geometry(width, height, x, y, x_crop, y_crop)
         self.updated = False
         return blocks
 
     @abstractmethod
-    def _draw(self, width, height, x, y, x_crop, y_crop, default_format):
+    def _get_all_blocks(
+            self, width, height, x, y, x_crop, y_crop, default_format):
         pass
 
-    def update(self, default_format=None, terminal=None):
-        blocks = []
+    def get_updated_blocks(self, default_format=None):
         if self._previous_geometry is None:
             raise ValueError("draw() must be called on {!r} before it can be "
                              "updated".format(self))
+        blocks = []
         if self.updated:
-            blocks.extend(self._update(default_format))
+            blocks.extend(self._get_updated_blocks(default_format))
             self.updated = False
         return blocks
 
     @abstractmethod
-    def _update(self, default_format):
+    def _get_updated_blocks(self, default_format):
         pass
 
     #@abstractmethod

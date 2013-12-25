@@ -134,16 +134,11 @@ class Terminal(blessings.Terminal):
         else:
             yield
 
-    def draw_lines(self, lines, x, y, default_format=None, styles=None):
-        if default_format is not None:
-            self.stream.write(default_format.draw(styles, self))
+    def draw_lines(
+            self, lines, x=0, y=0, default_escapse_sequence=None, styles=None):
         for y, line in enumerate(lines, start=y):
             self.stream.write(self.move(y, x))
-            if isinstance(line, StringWithFormatting):
-                line = line.draw(self, default_format, styles)
             self.stream.write(line)
-        if default_format is not None:
-            self.stream.write(self.normal)
 
 _terminal = Terminal()
 

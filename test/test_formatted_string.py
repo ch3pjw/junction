@@ -15,6 +15,7 @@ class TestFormattingBehviour(TestCase):
     def setUp(self):
         self.stream = StringIO()
         self.terminal = Terminal(stream=self.stream, force_styling=True)
+        self.maxDiff = 0
 
     def test_default_formatting(self):
         fill = Fill()
@@ -25,8 +26,8 @@ class TestFormattingBehviour(TestCase):
             root.draw()
         self.assertEqual(
             self.stream.getvalue(),
-            self.terminal.bold + self.terminal.green +
-            self.terminal.move(0, 0) + '...' + self.terminal.normal)
+            self.terminal.move(0, 0) + self.terminal.bold +
+            self.terminal.green + '...')
 
 
 class TestFormat(TestCase):
@@ -63,12 +64,10 @@ class TestFormat(TestCase):
     def test_draw(self):
         terminal = Terminal(force_styling=True)
         f = Format('blue')
-        default = Format('red')
+        default = 'foo'
         self.assertEqual(f.draw(terminal, default), terminal.blue)
         f = Format('normal')
-        # FIXME: I'm not sure I like this behaviour any more... might be better
-        # to have composable format things that we can pass around as 'normal'
-        self.assertEqual(f.draw(terminal, default), terminal.red)
+        self.assertEqual(f.draw(terminal, default), 'foo')
 
     def test_equality(self):
         self.assertEqual(Format('foo'), Format('foo'))
