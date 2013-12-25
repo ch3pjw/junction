@@ -18,7 +18,11 @@ class Block:
         self.default_format = default_format
 
     def __repr__(self):
-        return 'Block({}, {}, {})'.format(self.x, self.y, self.lines)
+        args = [self.x, self.y, self.lines]
+        if self.default_format:
+            args.append(self.default_format)
+        return '{}({})'.format(
+            self.__class__.__name__, ', '.join(str(arg) for arg in args))
 
     def __eq__(self, other):
         try:
