@@ -2,7 +2,7 @@ from string import whitespace
 from functools import reduce
 
 
-class LazyLookup:
+class Placeholder:
     __slots__ = ['attr_name']
 
     def __init__(self, attr_name):
@@ -47,7 +47,7 @@ class LazyLookup:
         return getattr(obj, self.attr_name)
 
 
-class Format(LazyLookup):
+class Format(Placeholder):
     '''A replacement for blessings.Terminal formatting strings that we can use
     to delay the determination of escape sequences until we're
     actually drawing an element. We're also used to produce smart
@@ -122,7 +122,7 @@ class FormatFactory:
             return Format(attr_name)
 
 
-class Style(LazyLookup):
+class Style(Placeholder):
     def do_lookup(self, styles):
         return styles.get(self.attr_name, Format(''))
 
@@ -158,7 +158,7 @@ class StringWithFormatting:
     def __init__(self, content):
         if isinstance(content, self.__class__):
             self._content = content._content
-        elif isinstance(content, (str, LazyLookup)):
+        elif isinstance(content, (str, Placeholder)):
             self._content = tuple([content])
         else:
             self._content = tuple(content)
