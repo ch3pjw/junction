@@ -1,5 +1,4 @@
 from unittest import TestCase
-from mock import patch
 from io import StringIO
 
 from junction.formatting import (
@@ -11,7 +10,7 @@ long_swf = (
     'string that needs wrapppppping')
 
 
-class TestFormattingBehviour(TestCase):
+class TestFormattingBehaviour(TestCase):
     def setUp(self):
         self.stream = StringIO()
         self.terminal = Terminal(stream=self.stream, force_styling=True)
@@ -20,14 +19,12 @@ class TestFormattingBehviour(TestCase):
     def test_default_formatting(self):
         fill = Fill()
         fill.default_format = Format('bold') + Format('green')
-        root = Root(fill, terminal=self.terminal)
-        with patch('junction.Terminal.width', 3), patch(
-                'junction.Terminal.height', 1):
-            root.draw()
-        self.assertEqual(
-            self.stream.getvalue(),
-            self.terminal.move(0, 0) + self.terminal.bold +
-            self.terminal.green + '...')
+        fill.draw(3, 1, terminal=self.terminal)
+        result = self.stream.getvalue()
+        expected = (
+            self.terminal.bold + self.terminal.green +
+            self.terminal.move(0, 0) + '...' + self.terminal.normal)
+        self.assertEqual(result, expected)
 
 
 class TestFormat(TestCase):

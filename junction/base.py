@@ -129,20 +129,23 @@ class ABCUIElement(metaclass=ABCMeta):
         terminal = terminal or get_terminal()
         styles = styles or {}
         for block in blocks:
-            lines = self._populate_lines(
-                block.lines, terminal, styles, block.default_format)
+            if block.default_format:
+                default_format = StringWithFormatting(block.default_format)
+                default_escape_sequence = default_format.draw(styles, terminal)
+                terminal.stream.write(default_escape_sequence)
+            lines = self._populate_lines(block.lines, terminal, styles)
             terminal.draw_lines(lines, block.x, block.y)
+            if block.default_format:
+                terminal.stream.write(terminal.normal)
         terminal.stream.flush()
 
-    def _populate_lines(self, lines, terminal, styles, default_format):
+    def _populate_lines(self, lines, terminal, styles):
         '''Takes some lines to draw to the terminal, which may contain
         formatting placeholder objects, and inserts the appropriate concrete
         escapes sequences by using data from the terminal object and styles
         dictionary.
         '''
         for i, line in enumerate(lines):
-            if default_format is not None and i == 0:
-                line = default_format + line
             if isinstance(line, StringWithFormatting):
                 line = line.draw(styles, terminal, default_format)
             yield line
