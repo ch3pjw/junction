@@ -1,13 +1,12 @@
 from abc import abstractmethod
 
 from .base import ABCUIElement, Block
-from .root import Root
 from .util import clamp, crop_or_expand
-from .formatting import StringWithFormatting, wrap
+from .formatting import wrap
 
 
 class ABCDisplayElement(ABCUIElement):
-    _scheme = {
+    _schemes = {
         'left': 'beginning',
         'center': 'middle',
         'right': 'end',
@@ -31,11 +30,11 @@ class ABCDisplayElement(ABCUIElement):
         '''
         lines = crop_or_expand(
             lines, height, default=[self.fillchar * width],
-            scheme=self._scheme[y_crop])
+            scheme=self._schemes[y_crop])
         for i, line in enumerate(lines):
             lines[i] = crop_or_expand(
                 line, width, default=self.fillchar,
-                scheme=self._scheme[x_crop])
+                scheme=self._schemes[x_crop])
         return lines
 
     def _get_all_blocks(
@@ -84,8 +83,8 @@ class Text(ABCDisplayElement):
 
     def _get_lines(self, width, height):
         lines = wrap(self.content, width)
-        if any(isinstance(line, StringWithFormatting) for line in lines):
-            lines[-1] += Root.format.normal
+        #if any(isinstance(line, StringWithFormatting) for line in lines):
+        #    lines[-1] += Root.format.normal
         return lines
 
 

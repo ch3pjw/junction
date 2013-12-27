@@ -2,8 +2,9 @@ from unittest import TestCase
 from io import StringIO
 
 from junction.formatting import (
-    Format, ParameterizingFormat, StringWithFormatting, TextWrapper, wrap)
-from junction import Root, Terminal, Fill
+    Format, EndFormat, ParameterizingFormat, StringWithFormatting, TextWrapper,
+    wrap)
+from junction import Root, Terminal, Fill, Text
 
 long_swf = (
     '  This is a    rather ' + Format('bold') + 'loooong ' + Format('normal') +
@@ -14,9 +15,8 @@ class TestFormattingBehaviour(TestCase):
     def setUp(self):
         self.stream = StringIO()
         self.terminal = Terminal(stream=self.stream, force_styling=True)
-        self.maxDiff = 0
 
-    def test_default_formatting(self):
+    def test_simple_default_formatting(self):
         fill = Fill()
         fill.default_format = Format('bold') + Format('green')
         fill.draw(3, 1, terminal=self.terminal)
@@ -24,7 +24,22 @@ class TestFormattingBehaviour(TestCase):
         expected = (
             self.terminal.bold + self.terminal.green +
             self.terminal.move(0, 0) + '...' + self.terminal.normal)
-        self.assertEqual(result, expected)
+        self.assertEqual(repr(result), repr(expected))
+
+    def test_default_formatting_with_other_formatting(self):
+        text = Text(Format('underline')('content'))
+        print('fooooo', repr(text.content))
+        text.default_format = Format('blue')
+        text.draw(8, 1, terminal=self.terminal)
+        print('baaaar', repr(text.content))
+        result = self.stream.getvalue()
+        expected = (
+            self.terminal.blue + self.terminal.move(0, 0) +
+            self.terminal.underline + 'content' + self.terminal.normal +
+            self.terminal.blue + self.terminal.normal)
+        print('result', repr(result))
+        print('expected', repr(expected))
+        self.assertEqual(repr(result), repr(expected))
 
 
 class TestFormat(TestCase):
@@ -56,15 +71,16 @@ class TestFormat(TestCase):
         f = Format('magic escape seq')
         result = f('printable text')
         self.assertIsInstance(result, StringWithFormatting)
-        self.assertEqual(result, f + 'printable text' + Format('normal'))
+        self.assertEqual(result, f + 'printable text' + EndFormat())
 
-    def test_draw(self):
+    def test_populate(self):
         terminal = Terminal(force_styling=True)
         f = Format('blue')
         default = 'foo'
-        self.assertEqual(f.draw(terminal, default), terminal.blue)
+        self.assertEqual(f.populate(terminal, default), terminal.blue)
         f = Format('normal')
-        self.assertEqual(f.draw(terminal, default), 'foo')
+        self.assertEqual(
+            f.populate(terminal, default), terminal.normal + 'foo')
 
     def test_equality(self):
         self.assertEqual(Format('foo'), Format('foo'))
@@ -98,26 +114,28 @@ class TestStyle(TestCase):
         test_style_string = (
             Root.style.heading('Something very important:') +
             'That you must not forget')
-        result = test_style_string.draw(self.styles, self.terminal)
-        self.assertEqual(
-            result,
+        result = test_style_string.populate(self.terminal, self.styles)
+        expected = (
             self.terminal.underline + 'Something very important:' +
             self.terminal.normal + 'That you must not forget')
+        self.assertEqual(repr(result), repr(expected))
 
     def test_style_referencing_style(self):
         test_style_string = Root.style.h1 + 'Most important thing'
-        result = test_style_string.draw(self.styles, self.terminal)
+        result = test_style_string.populate(
+            self.terminal, self.styles)
         self.assertEqual(
             result,
             self.terminal.underline + 'Most important thing')
 
     def test_compound_style(self):
         test_style_string = Root.style.h2('Not so important') + 'thing'
-        result = test_style_string.draw(self.styles, self.terminal)
-        self.assertEqual(
-            result,
+        print('blobl', repr(test_style_string))
+        result = test_style_string.populate(self.terminal, self.styles)
+        expected = (
             self.terminal.underline + self.terminal.color(230) +
             'Not so important' + self.terminal.normal + 'thing')
+        self.assertEqual(repr(result), repr(expected))
 
 
 class TestParameterizingFormat(TestCase):
@@ -137,12 +155,15 @@ class TestParameterizingFormat(TestCase):
         self.assertEqual(f, ParameterizingFormat('bob')(7))
         self.assertNotEqual(f, 'not-a-parameterizing-string')
 
-    def test_draw(self):
+    def test_populate(self):
         terminal = Terminal(force_styling=True)
-        f = ParameterizingFormat('cup')  # Must be legit curses cap
-        self.assertEqual(f.draw(terminal), terminal.cup)
-        f(1, 2)
-        self.assertEqual(f.draw(terminal), terminal.cup(1, 2))
+        f = ParameterizingFormat('color')
+        self.assertEqual(repr(f.populate(terminal)), repr(terminal.color))
+        f = ParameterizingFormat('color')(23)
+        self.assertEqual(repr(f.populate(terminal)), repr(terminal.color(23)))
+        f = ParameterizingFormat('color')(121)('testing')
+        self.assertEqual(
+            repr(f.populate(terminal)), repr(terminal.color(121)('testing')))
 
 
 class TestStringWithFormatting(TestCase):
@@ -160,10 +181,10 @@ class TestStringWithFormatting(TestCase):
             repr(self.swf),
             "StringWithFormatting('Hello ', Format('blue'), 'World!')")
 
-    def test_draw(self):
+    def test_populate(self):
         terminal = Terminal(force_styling=True)
         self.assertEqual(
-            self.swf.draw({}, terminal),
+            self.swf.populate(terminal),
             'Hello {}World!'.format(terminal.blue))
 
     def test_equality(self):
@@ -209,6 +230,7 @@ class TestStringWithFormatting(TestCase):
 
     def test_get_item_slice(self):
         swf = 'Hello ' + Format('hiding1') + Format('hiding2') + 'World!'
+        self.assertEqual(swf[:], swf)
         expected = 'lo ' + Format('hiding1') + Format('hiding2') + 'World!'
         self.assertEqual(swf[3:], expected)
         self.assertEqual(swf[3:100], expected)
@@ -221,8 +243,6 @@ class TestStringWithFormatting(TestCase):
         self.assertEqual(swf[2:6], expected)
         expected = 'Hello ' + Format('hiding1') + Format('hiding2') + 'Wo'
         self.assertEqual(swf[:8], expected)
-        expected = 'ello ' + Format('hiding1') + Format('hiding2') + 'Worl'
-        self.assertEqual(swf[1:10], expected)
         expected = Format('hiding1') + Format('hiding2') + 'World'
         self.assertEqual(swf[6:11], expected)
         expected = Format('hiding1') + Format('hiding2') + 'orld!'

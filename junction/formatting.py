@@ -1,12 +1,34 @@
+from abc import ABCMeta, abstractmethod
 from string import whitespace
-from functools import reduce
+from textwrap import TextWrapper as _TextWrapper
+from functools import reduce, wraps
 
 
-class Placeholder:
+def _populate_placeholder(placeholder, terminal, styles):
+    if isinstance(placeholder, FormatPlaceholder):
+        string = placeholder.populate(terminal)
+    elif isinstance(placeholder, StylePlaceholder):
+        string = placeholder.populate(styles, terminal)
+    elif isinstance(placeholder, PlaceholderGroup):
+        string = placeholder.populate(terminal, styles)
+    else:
+        raise TypeError(
+            "Can't populate styling placeholder object {!r} with type "
+            "{}".format(placeholder, type(placeholder)))
+    return string
+
+
+class Placeholder(metaclass=ABCMeta):
+    '''Placeholders represent objects that will at some point be transformed
+    into terminal escape sequences.
+    '''
     __slots__ = ['attr_name']
 
     def __init__(self, attr_name):
         self.attr_name = attr_name
+
+    def __repr__(self):
+        return '{}({!r})'.format(self.__class__.__name__, self.attr_name)
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -14,72 +36,168 @@ class Placeholder:
         else:
             return False
 
-    def __len__(self):
-        # Terminal escape sequences and the like have no visible length
-        return 0
+    def __add__(self, other):
+        if isinstance(other, Placeholder):
+            return PlaceholderGroup((self, other))
+        else:
+            raise TypeError('FIXME: add message')
 
-    def __bool__(self):
-        return True
+    @abstractmethod
+    def populate(self, obj):
+        pass
 
-    def __iter__(self):
-        return iter([self])
 
-    def __str__(self):
-        return ''
+class FormatPlaceholder(Placeholder):
+    def populate(self, terminal):
+        return getattr(terminal, self.attr_name)
 
-    def __repr__(self):
-        return '{}({!r})'.format(
-            self.__class__.__name__, self.attr_name)
+
+class StylePlaceholder(Placeholder):
+    def populate(self, styles, terminal):
+        style = styles.get(self.attr_name)
+        return _populate_placeholder(style, terminal, styles)
+
+
+class PlaceholderGroup:
+    def __init__(self, placeholders):
+        if isinstance(placeholders, self.__class__):
+            placeholders = placeholders.placeholders
+        self.placeholders = list(placeholders)
 
     def __add__(self, other):
-        if isinstance(other, StringWithFormatting):
-            return other.__radd__(self)
+        if isinstance(other, Placeholder):
+            self.placeholders.append(other)
+        elif isinstance(other, PlaceholderGroup):
+            self.placeholders.extend(other.placeholders)
         else:
-            return StringWithFormatting((self, other))
+            raise TypeError('FIXME: add message')
+
+    def populate(self, terminal, styles):
+        escape_sequence = ''
+        for placeholder in self.placeholders:
+            string = _populate_placeholder(placeholder, terminal, styles)
+            escape_sequence += string
+        return escape_sequence
+
+
+class StringComponentSpec(metaclass=ABCMeta):
+    '''A string component specification is an object that will be used to form
+    part of a string-like object that contains formatting information as well
+    as printable characters.
+    '''
+    __slots__ = ['placeholder', 'content']
+
+    def __init__(self, placeholder, content=None):
+        self.placeholder = placeholder
+        self.content = content
+
+    def __repr__(self):
+        return '{}({!r}, {!r})'.format(
+            self.__class__.__name__, self.placeholder, self.content)
+
+    def __str__(self):
+        return str(self.content)
+
+    def __getattr__(self, attr_name):
+        str_method = getattr(self.content, attr_name)
+        @wraps(str_method)
+        def do_str_method(*args, **kwargs):
+            new_str = str_method(*args, **kwargs)
+            return self.__class__(self.placeholder, new_str)
+        return do_str_method
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return (
+                self.placeholder == other.placeholder and
+                self.content == other.content)
+        else:
+            return False
+
+    def __len__(self):
+        return len(self.content)
+
+    def __iter__(self):
+        return iter(self.content)
+
+    def __getitem__(self, index):
+        return self.__class__(self.placeholder, self.content[index])
+
+    def __call__(self, content):
+        if self.content is None:
+            self.content = content
+            return self
+        else:
+            raise ValueError(
+                '{!r} has already been called, and therefore already has '
+                'existing content'.format(self))
+
+    def _protect_early_addition(self):
+        if self.content is None:
+            raise ValueError(
+                'Missing content for {}({!r}) - you tried to add styling data '
+                'to an existing content object without first calling your '
+                'style to specifiy the newly styled content'.format(
+                    self.__class__.__name__, self.placeholder))
+
+    def _sanitise_other(self, other):
+        if isinstance(other, str):
+            return NullComponentSpec(other)
+        elif isinstance(other, StringComponentSpec):
+            return other
+        else:
+            raise TypeError('Cannot add object with type {} to {!r}'.format(
+                type(other), self))
+
+    def __add__(self, other):
+        self._protect_early_addition()
+        other = self._sanitise_other(other)
+        return StringWithFormatting((self, other))
 
     def __radd__(self, other):
+        self._protect_early_addition()
+        other = self._sanitise_other(other)
         return StringWithFormatting((other, self))
 
-    def split(self, *args):
-        return [self]
+    def populate(self, terminal, styles):
+        if self.content is None:
+            raise ValueError(
+                '{!r} does not have any content, yet junction is trying to '
+                'draw it to the screen - a styling object must be called with '
+                'a content string before it is to be drawn'.format(self))
+        return _populate_placeholder(self.placeholder, terminal, styles)
 
-    def do_lookup(self, obj):
-        return getattr(obj, self.attr_name)
 
-
-class Format(Placeholder):
-    '''A replacement for blessings.Terminal formatting strings that we can use
-    to delay the determination of escape sequences until we're
-    actually drawing an element. We're also used to produce smart
-    StringWithFormatting objects that can be processed like strings without
-    terminal escape sequences in them for the purposes of layout generation
-    (i.e. using slices), but will preserve formatting.
-    '''
-    def __call__(self, content_string):
-        return self + content_string + self.__class__('normal')
-
-    def draw(self, terminal, default_escape_sequence=''):
-        if default_escape_sequence and self.attr_name == 'normal':
-            return default_escape_sequence
+class NullComponentSpec(StringComponentSpec):
+    def __init__(self, *args):
+        if len(args) == 1:
+            super().__init__(placeholder=None, content=args[0])
         else:
-            formatting_string = self.do_lookup(terminal)
-            return formatting_string
+            super().__init__(*args)
+
+    def __repr__(self):
+        return '{}({!r})'.format(self.__class__.__name__, self.content)
+
+    def populate(self, terminal, styles):
+        # FIXME: probably factor out this more nicely, so that we get the
+        # content check from our parent
+        return ''
 
 
-class ParameterizingFormat(Format):
-    '''A special type of Format object that handles being called just like a
-    blessings ParametrizingString.
+class ParameterizingSpec(StringComponentSpec):
+    '''A special type of StringComponentSpec object that handles being called
+    just like a blessings ParametrizingString.
     '''
-    __slots__ = Format.__slots__ + ['args']
+    __slots__ = StringComponentSpec.__slots__ + ['args']
 
-    def __init__(self, attr_name):
-        super().__init__(attr_name)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.args = None
 
     def __repr__(self):
         if self.args:
             return '{}({!r})({})'.format(
-                self.__class__.__name__, self.attr_name,
+                self.__class__.__name__, self.placeholder,
                 ', '.join(repr(arg) for arg in self.args))
         else:
             return super().__repr__()
@@ -91,21 +209,26 @@ class ParameterizingFormat(Format):
             return False
 
     def __call__(self, *args):
-        self.args = args
-        return self
-
-    def draw(self, terminal, default_format=None):
-        parameterizing_string = super().draw(terminal, default_format)
         if self.args:
-            return parameterizing_string(*self.args)
+            return super().__call__(*args)
         else:
-            return parameterizing_string
+            self.args = args
+            return self
+
+    def populate(self, terminal):
+        parameterizing_string = _populate_placeholder(
+            self.placeholder, terminal, {})
+        if self.args:
+            return parameterizing_string(*self.args) + self.content
+        else:
+            raise ValueError(
+                "{!r} has not been called with parameterizing argument(s), "
+                "such as a numerical colour, so we can't go about drawing a "
+                "concrete format to the screen!".format(self))
 
 
-class FormatFactory:
-    '''A simple helper object for constructing Format objects conveniently from
-    Root in a similar way to format escape sequences being accessible from a
-    blessings Terminal.
+class FormatSpecFactory:
+    '''FIXME: document this
     '''
     __slots__ = []  # Ensure noone can store arbitrary attributes on us
 
@@ -113,43 +236,20 @@ class FormatFactory:
         if attr_name == '__isabstractmethod__':
             return False
         else:
-            return self.get_format(attr_name)
-
-    def get_format(self, attr_name):
-        if attr_name in ('color', 'on_color'):
-            return ParameterizingFormat(attr_name)
-        else:
-            return Format(attr_name)
+            if attr_name in ('color', 'on_color'):
+                return ParameterizingSpec(FormatPlaceholder(attr_name))
+            else:
+                return StringComponentSpec(FormatPlaceholder(attr_name))
 
 
-class Style(Placeholder):
-    def do_lookup(self, styles):
-        return styles.get(self.attr_name, Format(''))
-
-    def __call__(self, content_string):
-        return self + content_string + Format('normal')
-
-    def draw(self, styles, terminal):
-        '''Recursively resolves a style to its actual escape sequence.
-        '''
-        style = self.do_lookup(styles)
-        if isinstance(style, Format):
-            return style.draw(terminal)
-        elif isinstance(style, (Style, StringWithFormatting)):
-            return style.draw(styles, terminal)
-
-
-class StyleFactory:
+class StyleSpecFactory:
     __slots__ = []  # Ensure noone can store arbitrary attributes on us
 
     def __getattr__(self, attr_name):
         if attr_name == '__isabstractmethod__':
             return False
         else:
-            return self.get_style(attr_name)
-
-    def get_style(self, attr_name):
-        return Style(attr_name)
+            return StringComponentSpec(StylePlaceholder(attr_name))
 
 
 class StringWithFormatting:
@@ -158,17 +258,22 @@ class StringWithFormatting:
     def __init__(self, content):
         if isinstance(content, self.__class__):
             self._content = content._content
-        elif isinstance(content, (str, Placeholder)):
-            self._content = tuple([content])
+        elif isinstance(content, StringComponentSpec):
+            self._content = (content,)
+        elif isinstance(content, str):
+            self._content = (NullComponentSpec(content),)
         else:
-            self._content = tuple(content)
+            self._content = tuple()
+            for string_spec in content:
+                self._content = self._join_content(
+                    self._content, (string_spec,))
 
     def __repr__(self):
-        return '{}({})'.format(
+        return '{}([{}])'.format(
             self.__class__.__name__, ', '.join(repr(s) for s in self._content))
 
     def __str__(self):
-        return ''.join(s for s in self._content if not isinstance(s, Format))
+        return ''.join(map(str, self._content))
 
     def __len__(self):
         return len(str(self))
@@ -177,11 +282,8 @@ class StringWithFormatting:
         # We're not False, even if we only have content that isn't printable
         return bool(self._content)
 
-    def __contains__(self, obj):
-        if isinstance(obj, Format):
-            return obj in self._content
-        else:
-            return obj in str(self)
+    def __contains__(self, string):
+            return string in str(self)
 
     def __eq__(self, other):
         if hasattr(other, '_content'):
@@ -189,84 +291,64 @@ class StringWithFormatting:
         else:
             return False
 
-    def __add__(self, other):
-        if isinstance(other, Format):
-            new_content = self._content + (other,)
-        elif isinstance(other, str):
-            if isinstance(self._content[-1], Format):
-                new_content = self._content + (other,)
-            else:
-                # We want to keep runs of strings a long as possible, so make
-                # something like ['hello'] + 'world' into ['helloworld'] not
-                # ['hello', 'world']:
-                new_content = self._content[:-1] + (self._content[-1] + other,)
+    def _get_new_content(self, other):
+        if isinstance(other, str):
+            new_content = (NullComponentSpec(other),)
+        elif isinstance(other, StringComponentSpec):
+            new_content = (other,)
+        elif isinstance(other, StringWithFormatting):
+            new_content = other._content
         else:
-            if not isinstance(self._content[-1], Format) and not isinstance(
-                    other._content[-1], Format):
-                # Similarly, we want to concat strings at each end of content
-                # when adding two StringWithFormatting objects:
-                new_content = (
-                    self._content[:-1] +
-                    (self._content[-1] + other._content[0],) +
-                    other._content[1:])
-            else:
-                new_content = self._content + other._content
-        return self.__class__(new_content)
+            raise TypeError('FIXME: nicer message!')
+        return new_content
+
+    def _join_content(self, content1, content2):
+        '''Takes the contents of two StringWithFormatting objects and joins
+        them together for making a new one, but taking care of the fact that if
+        we have two string_spec objects of the same type at the join, we should
+        glue them together.
+        '''
+        spec1 = content1[-1] if content1 else None
+        spec2 = content2[0] if content2 else None
+        if spec1 and type(spec1) is type(spec2):
+            spec1.content = spec1.content + spec2.content
+            content2 = content2[1:]
+        return content1 + content2
+
+    def __add__(self, other):
+        new_content = self._get_new_content(other)
+        content = self._join_content(self._content, new_content)
+        return self.__class__(content)
 
     def __radd__(self, other):
-        if isinstance(other, Format):
-            new_content = (other,) + self._content
-        else:
-            if isinstance(self._content[0], Format):
-                new_content = (other,) + self._content
-            else:
-                # Again, make longer runs of strings:
-                new_content = (other + self._content[0],) + self._content[1:]
-        return self.__class__(new_content)
+        new_content = self._get_new_content(other)
+        content = self._join_content(new_content, self._content)
+        return self.__class__(content)
 
     def __iter__(self):
         for string in self._content:
             for char in string:
                 yield char
 
-    def _enumerate_chars(self):
-        num_chars = 0
-        for char in self:
-            num_chars += len(char)
-            yield num_chars, char
-
     def _get_slice(self, start, stop):
-        start = start if start is not None else 0
-        stop = stop if stop is not None else len(self)
-        stop = min(stop, len(self))
+        slice_start = start if start is not None else 0
+        slice_stop = stop if stop is not None else len(self)
+        slice_stop = min(slice_stop, len(self))
         result = []
-        string = ''
-        first_format = []
-        for i, char in self._enumerate_chars():
-            if start < i <= stop:
-                if isinstance(char, Format):
-                    if string:
-                        result.append(string)
-                        string = ''
-                    result.append(char)
-                else:
-                    string += char
-            else:
-                if isinstance(char, Format):
-                    first_format.append(char)
-            if i == stop:
-                if first_format:
-                    result[0:0] = first_format
-                if string:
-                    result.append(string)
+        spec_start = 0
+        for string_spec in self._content:
+            spec_stop = spec_start + len(string_spec)
+            if spec_start >= slice_start and spec_stop <= slice_stop:
+                result.append(string_spec)
+            elif spec_start < slice_start < spec_stop:
+                result.append(string_spec[
+                    slice_start - spec_start:slice_stop - spec_start])
+            elif spec_start < slice_stop <= spec_stop:
+                result.append(string_spec[:slice_stop - spec_start])
+            if spec_stop >= slice_stop:
                 break
+            spec_start = spec_stop
         return self.__class__(result)
-
-    def split(self, sep=None, maxsplit=-1):
-        result = []
-        for section in self._content:
-            result.extend(section.split(sep))
-        return result
 
     def __getitem__(self, index):
         if isinstance(index, slice):
@@ -274,60 +356,69 @@ class StringWithFormatting:
         else:
             return str(self)[index]
 
-    def _populate_placeholder(
-            self, placeholder, styles, terminal, default_escape_sequence=''):
-        '''Will ask a placeholder to populate itself, giving it the right
-        information.
-        '''
-        if isinstance(placeholder, Format):
-            return placeholder.draw(terminal, default_escape_sequence)
-        elif isinstance(placeholder, Style):
-            return placeholder.draw(styles, terminal)
-        else:
-            return placeholder
+    def chunk(self, regex):
+        chunked_specs = []
+        for spec in self._content:
+            # We have to split up each string_spec in our content manually,
+            # because we use a regex
+            chunks = regex.split(spec.content)
+            # We then have to take that raw string, wrap it back up in its
+            # appropriate string spec, and we make a StringWithFormatting out
+            # of it for good measure
+            chunks = [
+                self.__class__(spec.__class__(spec.placeholder, c)) for c in
+                chunks if c]
+            chunked_specs.extend(chunks)
+        # Because we started by iterating over string_specs, we might have
+        # two 'chunks' in result that are actually part of the same logical
+        # word, so we need to recombine them
+        result = []
+        iterator = iter(chunked_specs)
+        prev_swf = iterator.__next__()  # Cheeky steal of the first one :-)
+        for swf in iterator:
+            if len(prev_swf.strip()) != 0 and len(swf.strip()) != 0:
+                # Neither string is whitespace
+                prev_swf = prev_swf + swf
+                continue
+            else:
+                result.append(prev_swf)
+                prev_swf = swf
+        result.append(prev_swf)
+        return result
 
-    def _iter_for_draw(self, styles, terminal, default_format):
-        if default_format:
-            default_escape_sequence = self._populate_placeholder(
-                default_format, styles, terminal)
+    def strip(self):
+        if len(self._content) == 0:
+            return self.__class__(self)
+        elif len(self._content) == 1:
+            return self.__class__(self._content[0].strip())
         else:
-            default_escape_sequence = ''
-        for string in self._content:
-            yield self._populate_placeholder(
-                string, styles, terminal, default_escape_sequence)
+            first = self._content[0].lstrip()
+            last = self._content[-1].rstrip()
+            total = (first,) + self._content[1:-1] + (last,)
+            return self.__class__(total)
 
-    def draw(self, styles, terminal, default_format=None):
-        return ''.join(
-            string for string in self._iter_for_draw(
-                styles, terminal, default_format))
+    def populate(self, terminal, styles=None):
+        ''.join(s.populate(terminal, styles) for s in self._content)
 
 
 class TextWrapper:
-    def __init__(self, width):
+    def __init__(self, width, break_on_hyphens=True):
         self.width = width
+        self.break_on_hyphens = break_on_hyphens
 
     def _chunk(self, string_like):
-        '''Generator that splits a string-like object (which can include our
-        StringWithFormatting) into chunks at whitespace boundaries.
-        '''
-        current_chunk = ''  # Default if we have no characters
-        previous_char_type = None
-        for char in string_like:
-            if isinstance(char, Format):
-                char_type = 'format'
-            elif char in whitespace:
-                char_type = 'break'
-            else:
-                char_type = 'char'
-            if char_type != previous_char_type:
-                if current_chunk:
-                    yield current_chunk
-                current_chunk = char
-            else:
-                # FIXME: this currently won't work with consecutive Formats...
-                current_chunk += char
-            previous_char_type = char_type
-        yield current_chunk
+        if self.break_on_hyphens:
+            regex = _TextWrapper.wordsep_re
+        else:
+            regex = _TextWrapper.wordsep_simple_re
+
+        if isinstance(string_like, StringWithFormatting):
+            chunks = string_like.chunk(regex)
+        else:
+            chunks = regex.split(string_like)
+            chunks = [c for c in chunks if c]
+
+        return chunks
 
     def _lstrip(self, chunks):
         self._do_strip(chunks, range(len(chunks)))
@@ -339,11 +430,10 @@ class TextWrapper:
         del_chunks = []
         for i in iter_:
             chunk = chunks[i]
-            if not isinstance(chunk, Format):
-                if chunk.strip() == '':
-                    del_chunks.append(i)
-                else:
-                    break
+            if str(chunk.strip()) == '':
+                del_chunks.append(i)
+            else:
+                break
         for i in reversed(sorted(del_chunks)):
             del chunks[i]
 
@@ -356,7 +446,7 @@ class TextWrapper:
         :returns: a list of string-like objects.
         '''
         result = []
-        chunks = list(self._chunk(text))
+        chunks = self._chunk(text)
         while chunks:
             self._lstrip(chunks)
             current_line = []

@@ -116,9 +116,10 @@ class ABCUIElement(metaclass=ABCMeta):
         self.updated = True
 
     def draw(self, width, height, x=0, y=0, x_crop='left', y_crop='top',
-             default_format=None, terminal=None, styles=None):
+             terminal=None, styles=None):
         blocks = self.get_all_blocks(
-            width, height, x, y, x_crop, y_crop, default_format=default_format)
+            width, height, x, y, x_crop, y_crop,
+            default_format=self.default_format)
         self._do_draw(blocks, terminal, styles)
 
     def update(self, default_format=None, terminal=None, styles=None):
@@ -131,15 +132,19 @@ class ABCUIElement(metaclass=ABCMeta):
         for block in blocks:
             if block.default_format:
                 default_format = StringWithFormatting(block.default_format)
-                default_escape_sequence = default_format.draw(styles, terminal)
+                default_escape_sequence = default_format.populate(
+                    terminal, styles)
                 terminal.stream.write(default_escape_sequence)
-            lines = self._populate_lines(block.lines, terminal, styles)
+            else:
+                default_escape_sequence = ''
+            lines = self._populate_lines(
+                block.lines, terminal, styles, default_escape_sequence)
             terminal.draw_lines(lines, block.x, block.y)
             if block.default_format:
                 terminal.stream.write(terminal.normal)
         terminal.stream.flush()
 
-    def _populate_lines(self, lines, terminal, styles):
+    def _populate_lines(self, lines, terminal, styles, default_format):
         '''Takes some lines to draw to the terminal, which may contain
         formatting placeholder objects, and inserts the appropriate concrete
         escapes sequences by using data from the terminal object and styles
@@ -147,7 +152,7 @@ class ABCUIElement(metaclass=ABCMeta):
         '''
         for i, line in enumerate(lines):
             if isinstance(line, StringWithFormatting):
-                line = line.draw(styles, terminal, default_format)
+                line = line.populate(terminal, styles, default_format)
             yield line
 
     def get_all_blocks(

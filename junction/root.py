@@ -3,13 +3,13 @@ import signal
 from contextlib import contextmanager
 
 from .base import ABCUIElement
-from .formatting import FormatFactory, StyleFactory
+from .formatting import FormatSpecFactory, StyleSpecFactory
 from .terminal import get_terminal, Keyboard
 
 
 class Root(ABCUIElement):
-    format = FormatFactory()
-    style = StyleFactory()
+    format = FormatSpecFactory()
+    style = StyleSpecFactory()
 
     def __init__(self, element=None, styles=None, terminal=None, loop=None):
         '''Represents the root element of a tree of UI elements. We are

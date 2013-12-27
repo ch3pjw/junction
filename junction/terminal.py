@@ -8,8 +8,6 @@ import fcntl
 from functools import wraps
 from contextlib import contextmanager
 
-from .formatting import Format, StringWithFormatting
-
 
 def _override_sugar(func):
     '''Use this decorator to override an attribute that is specified in
@@ -134,8 +132,7 @@ class Terminal(blessings.Terminal):
         else:
             yield
 
-    def draw_lines(
-            self, lines, x=0, y=0, default_escapse_sequence=None, styles=None):
+    def draw_lines(self, lines, x=0, y=0):
         for y, line in enumerate(lines, start=y):
             self.stream.write(self.move(y, x))
             self.stream.write(line)
