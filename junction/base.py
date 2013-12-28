@@ -135,8 +135,7 @@ class ABCUIElement(metaclass=ABCMeta):
             # underline as default and the child sets blue, we don't actually
             # apply both styles... :-(
             if block.default_format:
-                def_esq_seq = block.default_format.populate(
-                    terminal, styles, esc_seq_stack)
+                def_esq_seq = block.default_format.populate(terminal, styles)
                 terminal.stream.write(def_esq_seq)
                 esc_seq_stack.push(def_esq_seq)
             lines = self._populate_lines(

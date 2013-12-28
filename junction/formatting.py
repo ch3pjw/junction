@@ -44,6 +44,9 @@ class Placeholder:
         else:
             raise TypeError('FIXME: add message')
 
+    def __call__(self, content):
+        return StringComponentSpec(self, content)
+
     def populate(self, terminal, styles):
         raise NotImplementedError()
 
@@ -51,6 +54,41 @@ class Placeholder:
 class FormatPlaceholder(Placeholder):
     def populate(self, terminal, styles):
         return getattr(terminal, self.attr_name)
+
+
+class ParamaterizingFormatPlaceholder(FormatPlaceholder):
+    __slots__ = Placeholder.__slots__ + ['args']
+
+    def __init__(self, attr_name):
+        super().__init__(attr_name)
+        self.args = None
+
+    def __eq__(self, other):
+        if super().__eq__(other):
+            return self.args == other.args
+        else:
+            return False
+
+    def _protect_from_not_called(self):
+        if not self.args:
+            raise ValueError(
+                "FIXME: improve message. You can't use me anywhere yet, "
+                "because I don't refer to any concrete information.")
+
+    def __add__(self, other):
+        self._protect_from_not_called()
+        return super().__add__(other)
+
+    def __call__(self, *args):
+        if not self.args:
+            self.args = args
+            return self
+        else:
+            return super().__call__(*args)
+
+    def populate(self, terminal, styles):
+        self._protect_from_not_called()
+        return super().populate(terminal, styles)(*self.args)
 
 
 class StylePlaceholder(Placeholder):
@@ -88,7 +126,7 @@ class StringComponentSpec:
     '''
     __slots__ = ['placeholder', 'content']
 
-    def __init__(self, placeholder, content=None):
+    def __init__(self, placeholder, content):
         self.placeholder = placeholder
         self.content = content
 
@@ -127,16 +165,6 @@ class StringComponentSpec:
     def __getitem__(self, index):
         return self.__class__(self.placeholder, self.content[index])
 
-    def __call__(self, content):
-        if self.content is None:
-            self.content = content
-            return self
-        else:
-            raise ValueError(
-                '{!r} has already been called, and therefore already has '
-                'existing content'.format(self))
-
-    def _protect_early_addition(self):
         if self.content is None:
             raise ValueError(
                 'Missing content for {}({!r}) - you tried to add styling data '
@@ -154,12 +182,10 @@ class StringComponentSpec:
                 type(other), self))
 
     def __add__(self, other):
-        self._protect_early_addition()
         other = self._sanitise_other(other)
         return StringWithFormatting((self, other))
 
     def __radd__(self, other):
-        self._protect_early_addition()
         other = self._sanitise_other(other)
         return StringWithFormatting((other, self))
 
@@ -203,49 +229,7 @@ class NullComponentSpec(StringComponentSpec):
         return self.content
 
 
-class ParameterizingSpec(StringComponentSpec):
-    '''A special type of StringComponentSpec object that handles being called
-    just like a blessings ParametrizingString.
-    '''
-    __slots__ = StringComponentSpec.__slots__ + ['args']
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.args = None
-
-    def __repr__(self):
-        if self.args:
-            return '{}({!r})({})'.format(
-                self.__class__.__name__, self.placeholder,
-                ', '.join(repr(arg) for arg in self.args))
-        else:
-            return super().__repr__()
-
-    def __eq__(self, other):
-        if super().__eq__(other):
-            return self.args == other.args
-        else:
-            return False
-
-    def __call__(self, *args):
-        if self.args:
-            return super().__call__(*args)
-        else:
-            self.args = args
-            return self
-
-    def populate(self, terminal):
-        parameterizing_string = self.placeholder.populate(terminal, {})
-        if self.args:
-            return parameterizing_string(*self.args) + self.content
-        else:
-            raise ValueError(
-                "{!r} has not been called with parameterizing argument(s), "
-                "such as a numerical colour, so we can't go about drawing a "
-                "concrete format to the screen!".format(self))
-
-
-class FormatSpecFactory:
+class FormatPlaceholderFactory:
     '''FIXME: document this
     '''
     __slots__ = []  # Ensure noone can store arbitrary attributes on us
@@ -255,19 +239,19 @@ class FormatSpecFactory:
             return False
         else:
             if attr_name in ('color', 'on_color'):
-                return ParameterizingSpec(FormatPlaceholder(attr_name))
+                return ParamaterizingFormatPlaceholder(attr_name)
             else:
-                return StringComponentSpec(FormatPlaceholder(attr_name))
+                return FormatPlaceholder(attr_name)
 
 
-class StyleSpecFactory:
+class StylePlaceholderFactory:
     __slots__ = []  # Ensure noone can store arbitrary attributes on us
 
     def __getattr__(self, attr_name):
         if attr_name == '__isabstractmethod__':
             return False
         else:
-            return StringComponentSpec(StylePlaceholder(attr_name))
+            return StylePlaceholder(attr_name)
 
 
 class StringWithFormatting:

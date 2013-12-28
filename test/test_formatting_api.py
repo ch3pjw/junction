@@ -2,9 +2,10 @@ from unittest import TestCase
 from io import StringIO
 
 from junction.formatting import (
-    StringComponentSpec, NullComponentSpec, FormatPlaceholder,
-    StylePlaceholder, FormatSpecFactory, StyleSpecFactory,
-    StringWithFormatting, wrap)
+    EscapeSequenceStack, StringComponentSpec, NullComponentSpec,
+    FormatPlaceholder, ParamaterizingFormatPlaceholder, StylePlaceholder,
+    FormatPlaceholderFactory, StylePlaceholderFactory, StringWithFormatting,
+    wrap)
 from junction import Terminal, Text
 
 
@@ -15,48 +16,45 @@ class TestStringComponentSpec(TestCase):
                 pass
         self.test_cls = TestClass
 
-    def test_early_addition_exception(self):
-        with self.assertRaises(ValueError):
-            self.test_cls('red') + 'hello'
-        with self.assertRaises(ValueError):
-            'world' + self.test_cls('red')
-
-    def test_too_many_content_calls(self):
-        with self.assertRaises(ValueError):
-            self.test_cls('red')('content')('more content')
-
     def test_len(self):
-        self.assertEqual(len(self.test_cls('blue')('content')), 7)
+        self.assertEqual(len(self.test_cls('blue', 'content')), 7)
 
     def test_str(self):
-        self.assertEqual(str(self.test_cls('blue')('content')), 'content')
+        self.assertEqual(str(self.test_cls('blue', 'content')), 'content')
 
     def test_repr(self):
         self.assertEqual(
-            repr(self.test_cls('green')('beret')),
+            repr(self.test_cls('green', 'beret')),
             "TestClass('green', 'beret')")
 
     def test_getattr(self):
-        spec = self.test_cls('bold')('  Hello!  ')
-        self.assertEqual(spec.strip(), self.test_cls('bold')('Hello!'))
+        spec = self.test_cls('bold', '  Hello!  ')
+        self.assertEqual(spec.strip(), self.test_cls('bold', 'Hello!'))
 
 
-class TestParameterizingSpec(TestCase):
+class TestParameterizingFormatPlaceholder(TestCase):
     def setUp(self):
         self.terminal = Terminal(force_styling=True)
-        self.factory = FormatSpecFactory()
+        self.factory = FormatPlaceholderFactory()
+        self.stack = EscapeSequenceStack('')
 
     def test_too_many_calls(self):
-        parameterizing_format_spec = self.factory.color(230)
-        with self.assertRaises(ValueError):
-            parameterizing_format_spec('user content')('extra call')
+        param_fmt_placeholder = self.factory.color(230)
+        with self.assertRaises(TypeError):
+            param_fmt_placeholder('user content')('extra call')
 
     def test_populate(self):
-        parameterizing_format_spec = self.factory.color
+        param_fmt_placeholder = self.factory.color
         with self.assertRaises(ValueError):
-            parameterizing_format_spec.populate(self.terminal)
-        parameterizing_format_spec(121)('important info')
-        result = parameterizing_format_spec.populate(self.terminal)
+            param_fmt_placeholder.populate(self.terminal, {})
+        result = param_fmt_placeholder(121)
+        self.assertIsInstance(result, ParamaterizingFormatPlaceholder)
+        result = param_fmt_placeholder.populate(self.terminal, {})
+        self.assertEqual(result, self.terminal.color(121))
+        spec = param_fmt_placeholder('important info')
+        # FIXME: it might be nicer if the stack was something that existed on
+        # the Terminal...
+        result = spec.populate(self.terminal, {}, self.stack)
         self.assertEqual(result, self.terminal.color(121) + 'important info')
 
 
@@ -99,8 +97,8 @@ class TestPlaceholder(TestCase):
 
 class TestStringWithFormatting(TestCase):
     def setUp(self):
-        self.format = FormatSpecFactory()
-        self.style = StyleSpecFactory()
+        self.format = FormatPlaceholderFactory()
+        self.style = StylePlaceholderFactory()
         self.swf = 'Hello ' + self.format.blue(self.format.underline('World!'))
 
     def test_init(self):
@@ -168,7 +166,7 @@ class TestStringWithFormatting(TestCase):
 
 class TestTextWrapper(TestCase):
     def setUp(self):
-        self.format = FormatSpecFactory()
+        self.format = FormatPlaceholderFactory()
 
     def test_wrap_str(self):
         text = 'The  quick brown fox jumps over the lazy dog'
