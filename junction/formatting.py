@@ -3,10 +3,9 @@ from functools import reduce, wraps
 
 
 class EscapeSequenceStack:
-    def __init__(self, esc_seq):
+    def __init__(self, default_escape_sequence):
+        self.default_escape_sequence = default_escape_sequence
         self._stack = []
-        if esc_seq:
-            self.push(esc_seq)
 
     def push(self, esc_seq):
         self._stack.append(esc_seq)
@@ -17,7 +16,7 @@ class EscapeSequenceStack:
         on the terminal*.
         '''
         self._stack.pop()
-        return ''.join(self._stack)
+        return self.default_escape_sequence + ''.join(self._stack)
 
 
 class Placeholder:
