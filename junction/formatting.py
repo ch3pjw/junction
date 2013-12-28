@@ -135,6 +135,9 @@ class StringComponentSpec(metaclass=ABCMeta):
     def __len__(self):
         return len(self.content)
 
+    def __bool__(self):
+        return True
+
     def __iter__(self):
         return iter(self.content)
 
