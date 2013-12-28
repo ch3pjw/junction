@@ -1,5 +1,3 @@
-from abc import ABCMeta, abstractmethod
-from string import whitespace
 from textwrap import TextWrapper as _TextWrapper
 from functools import reduce, wraps
 
@@ -36,7 +34,7 @@ class EscapeSequenceStack:
         return ''.join(self._stack)
 
 
-class Placeholder(metaclass=ABCMeta):
+class Placeholder:
     '''Placeholders represent objects that will at some point be transformed
     into terminal escape sequences.
     '''
@@ -60,7 +58,6 @@ class Placeholder(metaclass=ABCMeta):
         else:
             raise TypeError('FIXME: add message')
 
-    @abstractmethod
     def populate(self, obj):
         pass
 
@@ -98,7 +95,7 @@ class PlaceholderGroup:
         return escape_sequence
 
 
-class StringComponentSpec(metaclass=ABCMeta):
+class StringComponentSpec:
     '''A string component specification is an object that will be used to form
     part of a string-like object that contains formatting information as well
     as printable characters.
