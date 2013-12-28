@@ -181,6 +181,17 @@ class TestDefaultFormatting(TestCase):
             self.terminal.move(0, 0) + '...' + self.terminal.normal)
         self.assertEqual(repr(result), repr(expected))
 
+    def test_default_formatting_with_other_formatting(self):
+        text = Text(self.format.underline('content'))
+        text.default_format = self.format.blue
+        text.draw(7, 1, terminal=self.terminal)
+        result = self.terminal.stream.getvalue()
+        expected = (
+            self.terminal.normal + self.terminal.blue +
+            self.terminal.move(0, 0) + self.terminal.underline + 'content' +
+            self.terminal.normal + self.terminal.blue + self.terminal.normal)
+        self.assertEqual(repr(result), repr(expected))
+
 
 class TestTextWrapper(TestCase):
     def setUp(self):
