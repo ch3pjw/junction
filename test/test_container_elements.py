@@ -169,7 +169,7 @@ class TestContainerElements(TestCase):
         blocks = zebra.get_all_blocks(3, 10)
         self.assertEqual(blocks, [
             Block(0, 0, ['...'], 'norm'),
-            Block(0, 1, ['...'], 'world'),
+            Block(0, 1, ['...'], 'normworld'),
             Block(0, 2, ['...'], 'norm'),
-            Block(0, 3, [',,,', ',,,'], 'world'),
+            Block(0, 3, [',,,', ',,,'], 'normworld'),
             Block(0, 5, ['...'], 'norm')])

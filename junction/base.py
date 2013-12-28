@@ -177,6 +177,11 @@ class ABCUIElement(metaclass=ABCMeta):
         if self._previous_geometry is None:
             raise ValueError("draw() must be called on {!r} before it can be "
                              "updated".format(self))
+        if self.default_format:
+            if default_format:
+                default_format = default_format + self.default_format
+            else:
+                default_format = self.default_format
         blocks = []
         if self.updated:
             blocks.extend(self._get_updated_blocks(default_format))

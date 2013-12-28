@@ -15,9 +15,9 @@ class ABCDisplayElement(ABCUIElement):
         'bottom': 'end'}
 
     def _get_updated_blocks(self, default_format):
-        return self.get_all_blocks(
+        return self._get_all_blocks(
             *self._previous_geometry,
-            default_format=self.default_format or default_format)
+            default_format=default_format)
 
     @abstractmethod
     def _get_lines(self, width, height):

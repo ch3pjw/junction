@@ -35,9 +35,10 @@ class ABCContainerElement(ABCUIElement):
         self._updated = value
 
     @abstractmethod
-    def _get_elements_sizes_and_positions(self, width, height, x, y):
-        '''Returns an interable containing each element with its corresponding
-        dimenions and position.
+    def _get_elements_and_parameters(
+            self, width, height, x, y, default_format):
+        '''Returns an iterable containing each element with its corresponding
+        width, height, x and y position and default_format.
         '''
 
     def add_element(self, element):
@@ -56,8 +57,9 @@ class ABCContainerElement(ABCUIElement):
         blocks = []
         x_crop = x_crop or self._halign
         y_crop = y_crop or self._valign
-        for element, width, height, x, y in (
-                self._get_elements_sizes_and_positions(width, height, x, y)):
+        for element, width, height, x, y, default_format in (
+                self._get_elements_and_parameters(
+                    width, height, x, y, default_format)):
             blocks.extend(element.get_all_blocks(
                 width, height, x, y, x_crop=x_crop, y_crop=y_crop,
                 default_format=default_format))
@@ -66,8 +68,7 @@ class ABCContainerElement(ABCUIElement):
     def _get_updated_blocks(self, default_format):
         blocks = []
         for element in self:
-            blocks.extend(element.get_updated_blocks(
-                self.default_format or default_format))
+            blocks.extend(element.get_updated_blocks(default_format))
         return blocks
 
 
@@ -115,8 +116,11 @@ class Box(ABCContainerElement):
     def max_height(self):
         return self._active_element.max_height + 2
 
-    def _get_elements_sizes_and_positions(self, width, height, x, y):
-        yield self._active_element, width - 2, height - 2, x + 1, y + 1
+    def _get_elements_and_parameters(
+            self, width, height, x, y, default_format):
+        yield (
+            self._active_element, width - 2, height - 2, x + 1, y + 1,
+            default_format)
 
     def _get_all_blocks(self, width, height, x=0, y=0, *args, **kwargs):
         blocks = super()._get_all_blocks(width, height, x, y, *args, **kwargs)
@@ -149,13 +153,16 @@ class Stack(ABCContainerElement):
     def min_height(self):
         return sum(element.min_height or 1 for element in self)
 
-    def _get_elements_sizes_and_positions(self, width, height, x, y):
+    def _get_elements_and_parameters(
+            self, width, height, x, y, default_format):
         if self.valign == 'top':
             current_y = y
             for element in self:
                 elem_height = min(height, element.min_height or 1)
                 if elem_height:
-                    yield element, width, elem_height, x, current_y
+                    yield (
+                        element, width, elem_height, x, current_y,
+                        default_format)
                     current_y += elem_height
                     height -= elem_height
                 else:
@@ -166,7 +173,9 @@ class Stack(ABCContainerElement):
                 elem_height = min(height, element.min_height or 1)
                 if elem_height:
                     current_y -= elem_height
-                    yield element, width, elem_height, x, current_y
+                    yield (
+                        element, width, elem_height, x, current_y,
+                        default_format)
                     height -= elem_height
                 else:
                     break
@@ -180,13 +189,18 @@ class Zebra(Stack):
 
     @property
     def _formats(self):
-        return [
-            self.even_format or self.default_format or None,
-            self.odd_format or self.default_format or None]
+        return [self.even_format, self.odd_format]
 
-    def _get_elements_sizes_and_positions(self, width, height, x, y):
-        parent = super()._get_elements_sizes_and_positions(
-            width, height, x, y)
-        for i, (element, width, height, x, y) in enumerate(parent):
-            element.default_format = self._formats[i % 2]
-            yield element, width, height, x, y
+    def _get_elements_and_parameters(
+            self, width, height, x, y, default_format):
+        parent = super()._get_elements_and_parameters(
+            width, height, x, y, default_format)
+        for i, (element, width, height, x, y, default_format) in enumerate(
+                parent):
+            zebra_format = self._formats[i % 2]
+            if zebra_format:
+                if default_format:
+                    default_format = default_format + zebra_format
+                else:
+                    default_format = zebra_format
+            yield element, width, height, x, y, default_format
