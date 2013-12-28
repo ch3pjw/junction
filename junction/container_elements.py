@@ -60,7 +60,7 @@ class ABCContainerElement(ABCUIElement):
                 self._get_elements_sizes_and_positions(width, height, x, y)):
             blocks.extend(element.get_all_blocks(
                 width, height, x, y, x_crop=x_crop, y_crop=y_crop,
-                default_format=self.default_format or default_format))
+                default_format=default_format))
         return blocks
 
     def _get_updated_blocks(self, default_format):

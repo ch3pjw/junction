@@ -6,7 +6,7 @@ from junction.formatting import (
     FormatPlaceholder, ParamaterizingFormatPlaceholder, StylePlaceholder,
     FormatPlaceholderFactory, StylePlaceholderFactory, StringWithFormatting,
     wrap)
-from junction import Terminal, Text
+from junction import Terminal, Text, Fill
 
 
 class TestStringComponentSpec(TestCase):
@@ -36,7 +36,7 @@ class TestParameterizingFormatPlaceholder(TestCase):
     def setUp(self):
         self.terminal = Terminal(force_styling=True)
         self.factory = FormatPlaceholderFactory()
-        self.stack = EscapeSequenceStack('')
+        self.stack = EscapeSequenceStack(self.terminal.normal)
 
     def test_too_many_calls(self):
         param_fmt_placeholder = self.factory.color(230)
@@ -50,12 +50,14 @@ class TestParameterizingFormatPlaceholder(TestCase):
         result = param_fmt_placeholder(121)
         self.assertIsInstance(result, ParamaterizingFormatPlaceholder)
         result = param_fmt_placeholder.populate(self.terminal, {})
-        self.assertEqual(result, self.terminal.color(121))
+        self.assertEqual(repr(result), repr(self.terminal.color(121)))
         spec = param_fmt_placeholder('important info')
         # FIXME: it might be nicer if the stack was something that existed on
         # the Terminal...
         result = spec.populate(self.terminal, {}, self.stack)
-        self.assertEqual(result, self.terminal.color(121) + 'important info')
+        self.assertEqual(repr(result), repr(
+            self.terminal.color(121) + 'important info' +
+            self.terminal.normal))
 
 
 class TestNullComponent(TestCase):
@@ -158,9 +160,25 @@ class TestStringWithFormatting(TestCase):
         # trailing space in it, because the word wrapping initiated by Text
         # should have stripped it off.
         expected = (
-            terminal.move(0, 0) + 'Hello ' + terminal.move(1, 0) +
-            terminal.blue + terminal.underline + 'World!' + terminal.normal +
-            terminal.blue + terminal.normal)
+            terminal.normal + terminal.move(0, 0) + 'Hello ' +
+            terminal.move(1, 0) + terminal.blue + terminal.underline +
+            'World!' + terminal.normal + terminal.blue + terminal.normal)
+        self.assertEqual(repr(result), repr(expected))
+
+
+class TestDefaultFormatting(TestCase):
+    def setUp(self):
+        self.terminal = Terminal(stream=StringIO(), force_styling=True)
+        self.format = FormatPlaceholderFactory()
+
+    def test_simple_default_formatting(self):
+        fill = Fill()
+        fill.default_format = self.format.bold + self.format.green
+        fill.draw(3, 1, terminal=self.terminal)
+        result = self.terminal.stream.getvalue()
+        expected = (
+            self.terminal.normal + self.terminal.bold + self.terminal.green +
+            self.terminal.move(0, 0) + '...' + self.terminal.normal)
         self.assertEqual(repr(result), repr(expected))
 
 

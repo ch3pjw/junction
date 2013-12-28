@@ -47,7 +47,7 @@ class ABCDisplayElement(ABCUIElement):
         # Perform an additional crop with *different alignment* to resize the
         # UI element's rendered area text to the required area:
         lines = self._do_crop(lines, width, height, x_crop, y_crop)
-        return [Block(x, y, lines, self.default_format or default_format)]
+        return [Block(x, y, lines, default_format)]
 
 
 class Fill(ABCDisplayElement):

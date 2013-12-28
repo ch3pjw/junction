@@ -2,7 +2,9 @@ from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 
 from .terminal import get_terminal
-from .formatting import StringWithFormatting, EscapeSequenceStack
+from .formatting import (
+    StringWithFormatting, EscapeSequenceStack, FormatPlaceholder,
+    PlaceholderGroup)
 
 
 Geometry = namedtuple(
@@ -117,9 +119,7 @@ class ABCUIElement(metaclass=ABCMeta):
 
     def draw(self, width, height, x=0, y=0, x_crop='left', y_crop='top',
              terminal=None, styles=None):
-        blocks = self.get_all_blocks(
-            width, height, x, y, x_crop, y_crop,
-            default_format=self.default_format)
+        blocks = self.get_all_blocks(width, height, x, y, x_crop, y_crop)
         self._do_draw(blocks, terminal, styles)
 
     def update(self, default_format=None, terminal=None, styles=None):
@@ -130,6 +130,7 @@ class ABCUIElement(metaclass=ABCMeta):
         terminal = terminal or get_terminal()
         styles = styles or {}
         esc_seq_stack = EscapeSequenceStack(terminal.normal)
+        terminal.stream.write(terminal.normal)
         for block in blocks:
             if block.default_format:
                 def_esq_seq = block.default_format.populate(terminal, styles)
@@ -156,6 +157,11 @@ class ABCUIElement(metaclass=ABCMeta):
     def get_all_blocks(
             self, width, height, x=0, y=0, x_crop='left', y_crop='top',
             default_format=None):
+        if self.default_format:
+            if default_format:
+                default_format = default_format + self.default_format
+            else:
+                default_format = self.default_format
         blocks = self._get_all_blocks(
             width, height, x, y, x_crop, y_crop, default_format)
         self._previous_geometry = Geometry(width, height, x, y, x_crop, y_crop)
