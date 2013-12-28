@@ -131,9 +131,19 @@ class ABCUIElement(metaclass=ABCMeta):
         styles = styles or {}
         esc_seq_stack = EscapeSequenceStack(terminal.normal)
         for block in blocks:
+            # FIXME: default formats are not additive - e.g. if the parent sets
+            # underline as default and the child sets blue, we don't actually
+            # apply both styles... :-(
+            if block.default_format:
+                def_esq_seq = block.default_format.populate(
+                    terminal, styles, esc_seq_stack)
+                terminal.stream.write(def_esq_seq)
+                esc_seq_stack.push(def_esq_seq)
             lines = self._populate_lines(
                 block.lines, terminal, styles, esc_seq_stack)
             terminal.draw_lines(lines, block.x, block.y)
+            if block.default_format:
+                terminal.stream.write(esc_seq_stack.pop())
         terminal.stream.flush()
 
     def _populate_lines(self, lines, terminal, styles, esc_seq_stack):

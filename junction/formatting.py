@@ -189,19 +189,20 @@ class StringComponentSpec(metaclass=ABCMeta):
         return chunks
 
     def populate(self, terminal, styles, esc_seq_stack):
-        if self.content is None:
-            raise ValueError(
-                '{!r} does not have any content, yet junction is trying to '
-                'draw it to the screen - a styling object must be called with '
-                'a content string before it is to be drawn'.format(self))
         esc_seq = _populate_placeholder(self.placeholder, terminal, styles)
-        esc_seq_stack.push(esc_seq)
-        if isinstance(self.content, StringComponentSpec):
-            content = self.content.populate(
-                terminal, styles, esc_seq_stack)
+        if self.content is None:
+            # Someone might look us up as Root.format.blue, and want to use us
+            # with no content as a definition of what blue is (i.e. just want
+            # to refer to our placeholder directly)
+            return esc_seq
         else:
-            content = self.content
-        return esc_seq + content + esc_seq_stack.pop()
+            esc_seq_stack.push(esc_seq)
+            if isinstance(self.content, StringComponentSpec):
+                content = self.content.populate(
+                    terminal, styles, esc_seq_stack)
+            else:
+                content = self.content
+            return esc_seq + content + esc_seq_stack.pop()
 
 
 class NullComponentSpec(StringComponentSpec):
