@@ -98,16 +98,21 @@ class StylePlaceholder(Placeholder):
 
 
 class PlaceholderGroup:
-    def __init__(self, placeholders):
+    def __init__(self, placeholders=None):
         if isinstance(placeholders, self.__class__):
             placeholders = placeholders.placeholders
-        self.placeholders = list(placeholders)
+        self.placeholders = tuple(placeholders) if placeholders else tuple()
+
+    def __repr__(self):
+        return '{}([{}])'.format(
+            self.__class__.__name__,
+            ', '.join(repr(p) for p in self.placeholders))
 
     def __add__(self, other):
         if isinstance(other, Placeholder):
-            self.placeholders.append(other)
+            return self.__class__(self.placeholders + (other,))
         elif isinstance(other, PlaceholderGroup):
-            self.placeholders.extend(other.placeholders)
+            return self.__class__(self.placeholders + other.placeholders)
         else:
             raise TypeError('FIXME: add message')
 
