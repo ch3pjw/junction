@@ -36,6 +36,9 @@ class Root(ABCUIElement):
         self.terminal = terminal or get_terminal()
         self.loop = loop or asyncio.get_event_loop()
         self.keyboard = Keyboard()
+        # FIXME: we should probably inherit from ABCContainerElement so that we
+        # get stuff like child.updated tracking by default:
+        self._updated = True
 
     @property
     def element(self):
@@ -48,6 +51,14 @@ class Root(ABCUIElement):
         self._element = new_element
         if new_element:
             new_element.root = self
+
+    @property
+    def updated(self):
+        return self.element.updated or self._updated
+
+    @updated.setter
+    def updated(self, value):
+        self._updated = True
 
     @contextmanager
     def _handle_screen_resize(self):
