@@ -71,10 +71,12 @@ class TestNullComponent(TestCase):
 class TestPlaceholder(TestCase):
     def setUp(self):
         self.terminal = Terminal(force_styling=True)
+        self.format = FormatPlaceholderFactory()
+        self.style = StylePlaceholderFactory()
         self.styles = {
-            'heading': FormatPlaceholder('underline'),
-            'h1': StylePlaceholder('heading'),
-            'h2': StylePlaceholder('heading') + FormatPlaceholder('red')}
+            'heading': self.format.underline,
+            'h1': self.style.heading,
+            'h2': self.style.heading + self.format.red}
 
     def test_populate_format_placeholder(self):
         format_placeholder = FormatPlaceholder('red')
