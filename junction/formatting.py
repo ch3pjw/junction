@@ -2,20 +2,6 @@ from textwrap import TextWrapper as _TextWrapper
 from functools import reduce, wraps
 
 
-def _populate_placeholder(placeholder, terminal, styles):
-    if isinstance(placeholder, FormatPlaceholder):
-        string = placeholder.populate(terminal, styles)
-    elif isinstance(placeholder, StylePlaceholder):
-        string = placeholder.populate(terminal, styles)
-    elif isinstance(placeholder, PlaceholderGroup):
-        string = placeholder.populate(terminal, styles)
-    else:
-        raise TypeError(
-            "Can't populate styling placeholder object {!r} with type "
-            "{}".format(placeholder, type(placeholder)))
-    return string
-
-
 class EscapeSequenceStack:
     def __init__(self, esc_seq):
         self._stack = []
@@ -70,7 +56,7 @@ class FormatPlaceholder(Placeholder):
 class StylePlaceholder(Placeholder):
     def populate(self, terminal, styles):
         style = styles.get(self.attr_name)
-        return _populate_placeholder(style, terminal, styles)
+        return style.populate(terminal, styles)
 
 
 class PlaceholderGroup:
@@ -90,7 +76,7 @@ class PlaceholderGroup:
     def populate(self, terminal, styles):
         escape_sequence = ''
         for placeholder in self.placeholders:
-            string = _populate_placeholder(placeholder, terminal, styles)
+            string = placeholder.populate(terminal, styles)
             escape_sequence += string
         return escape_sequence
 
@@ -186,7 +172,7 @@ class StringComponentSpec:
         return chunks
 
     def populate(self, terminal, styles, esc_seq_stack):
-        esc_seq = _populate_placeholder(self.placeholder, terminal, styles)
+        esc_seq = self.placeholder.populate(terminal, styles)
         if self.content is None:
             # Someone might look us up as Root.format.blue, and want to use us
             # with no content as a definition of what blue is (i.e. just want
@@ -249,8 +235,7 @@ class ParameterizingSpec(StringComponentSpec):
             return self
 
     def populate(self, terminal):
-        parameterizing_string = _populate_placeholder(
-            self.placeholder, terminal, {})
+        parameterizing_string = self.placeholder.populate(terminal, {})
         if self.args:
             return parameterizing_string(*self.args) + self.content
         else:
