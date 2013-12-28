@@ -4,9 +4,9 @@ from functools import reduce, wraps
 
 def _populate_placeholder(placeholder, terminal, styles):
     if isinstance(placeholder, FormatPlaceholder):
-        string = placeholder.populate(terminal)
+        string = placeholder.populate(terminal, styles)
     elif isinstance(placeholder, StylePlaceholder):
-        string = placeholder.populate(styles, terminal)
+        string = placeholder.populate(terminal, styles)
     elif isinstance(placeholder, PlaceholderGroup):
         string = placeholder.populate(terminal, styles)
     else:
@@ -58,17 +58,17 @@ class Placeholder:
         else:
             raise TypeError('FIXME: add message')
 
-    def populate(self, obj):
-        pass
+    def populate(self, terminal, styles):
+        raise NotImplementedError()
 
 
 class FormatPlaceholder(Placeholder):
-    def populate(self, terminal):
+    def populate(self, terminal, styles):
         return getattr(terminal, self.attr_name)
 
 
 class StylePlaceholder(Placeholder):
-    def populate(self, styles, terminal):
+    def populate(self, terminal, styles):
         style = styles.get(self.attr_name)
         return _populate_placeholder(style, terminal, styles)
 

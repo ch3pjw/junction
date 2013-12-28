@@ -78,22 +78,22 @@ class TestPlaceholder(TestCase):
 
     def test_populate_format_placeholder(self):
         format_placeholder = FormatPlaceholder('red')
-        result = format_placeholder.populate(self.terminal)
+        result = format_placeholder.populate(self.terminal, self.styles)
         self.assertEqual(result, self.terminal.red)
 
     def test_populate_style_placeholder_simple(self):
         style_placeholder = StylePlaceholder('heading')
-        result = style_placeholder.populate(self.styles, self.terminal)
+        result = style_placeholder.populate(self.terminal, self.styles)
         self.assertEqual(result, self.terminal.underline)
 
     def test_populate_style_placeholder_style_ref(self):
         style_placeholder = StylePlaceholder('h1')
-        result = style_placeholder.populate(self.styles, self.terminal)
+        result = style_placeholder.populate(self.terminal, self.styles)
         self.assertEqual(result, self.terminal.underline)
 
     def test_populate_style_placeholder_compound(self):
         style_placeholder = StylePlaceholder('h2')
-        result = style_placeholder.populate(self.styles, self.terminal)
+        result = style_placeholder.populate(self.terminal, self.styles)
         self.assertEqual(result, self.terminal.underline + self.terminal.red)
 
 
