@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 
 from .terminal import get_terminal
-from .formatting import StringWithFormatting
+from .formatting import StringWithFormatting, EscapeSequenceStack
 
 
 Geometry = namedtuple(
@@ -129,13 +129,14 @@ class ABCUIElement(metaclass=ABCMeta):
     def _do_draw(self, blocks, terminal, styles):
         terminal = terminal or get_terminal()
         styles = styles or {}
+        esc_seq_stack = EscapeSequenceStack(terminal.normal)
         for block in blocks:
             lines = self._populate_lines(
-                block.lines, terminal, styles)
+                block.lines, terminal, styles, esc_seq_stack)
             terminal.draw_lines(lines, block.x, block.y)
         terminal.stream.flush()
 
-    def _populate_lines(self, lines, terminal, styles):
+    def _populate_lines(self, lines, terminal, styles, esc_seq_stack):
         '''Takes some lines to draw to the terminal, which may contain
         formatting placeholder objects, and inserts the appropriate concrete
         escapes sequences by using data from the terminal object and styles
@@ -143,7 +144,7 @@ class ABCUIElement(metaclass=ABCMeta):
         '''
         for i, line in enumerate(lines):
             if isinstance(line, StringWithFormatting):
-                line = line.populate(terminal, styles)
+                line = line.populate(terminal, styles, esc_seq_stack)
             yield line
 
     def get_all_blocks(

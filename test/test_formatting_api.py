@@ -101,7 +101,7 @@ class TestStringWithFormatting(TestCase):
     def setUp(self):
         self.format = FormatSpecFactory()
         self.style = StyleSpecFactory()
-        self.swf = 'Hello ' + self.format.blue('World!')
+        self.swf = 'Hello ' + self.format.blue(self.format.underline('World!'))
 
     def test_init(self):
         swf = StringWithFormatting('Hello')
@@ -130,26 +130,25 @@ class TestStringWithFormatting(TestCase):
         self.assertEqual(self.swf[7], 'o')
 
     def test_getitem_slice(self):
-        swf = 'Hello ' + self.format.blue(self.format.underline('World!'))
-        self.assertEqual(swf[:], swf)
+        self.assertEqual(self.swf[:], self.swf)
         expected = 'lo ' + self.format.blue(self.format.underline('World!'))
-        self.assertEqual(swf[3:], expected)
-        self.assertEqual(swf[3:100], expected)
-        self.assertEqual(swf[3:len(self.swf)], expected)
+        self.assertEqual(self.swf[3:], expected)
+        self.assertEqual(self.swf[3:100], expected)
+        self.assertEqual(self.swf[3:len(self.swf)], expected)
         expected = 'o ' + self.format.blue(self.format.underline('Wor'))
-        self.assertEqual(swf[4:9], expected)
+        self.assertEqual(self.swf[4:9], expected)
         expected = StringWithFormatting('llo')
-        self.assertEqual(swf[2:5], expected)
+        self.assertEqual(self.swf[2:5], expected)
         expected = StringWithFormatting('llo ')
-        self.assertEqual(swf[2:6], expected)
+        self.assertEqual(self.swf[2:6], expected)
         expected = 'Hello ' + self.format.blue(self.format.underline('Wo'))
-        self.assertEqual(swf[:8], expected)
+        self.assertEqual(self.swf[:8], expected)
         expected = StringWithFormatting(
             self.format.blue(self.format.underline('World')))
-        self.assertEqual(swf[6:11], expected)
+        self.assertEqual(self.swf[6:11], expected)
         expected = StringWithFormatting(
             self.format.blue(self.format.underline('orld!')))
-        self.assertEqual(swf[7:12], expected)
+        self.assertEqual(self.swf[7:12], expected)
 
     def test_end_to_end(self):
         terminal = Terminal(force_styling=True)
@@ -162,7 +161,8 @@ class TestStringWithFormatting(TestCase):
         # should have stripped it off.
         expected = (
             terminal.move(0, 0) + 'Hello ' + terminal.move(1, 0) +
-            terminal.blue + 'World!')
+            terminal.blue + terminal.underline + 'World!' + terminal.normal +
+            terminal.blue + terminal.normal)
         self.assertEqual(repr(result), repr(expected))
 
 
@@ -193,7 +193,4 @@ class TestTextWrapper(TestCase):
             'string th' + self.format.green('at'),
             StringWithFormatting(self.format.green('needs wrapp')),
             self.format.green('pppp') + 'ing']
-        print(result)
-        print('-' * 10)
-        print(expected)
         self.assertEqual(result, expected)

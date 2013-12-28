@@ -9,8 +9,6 @@ def _populate_placeholder(placeholder, terminal, styles):
         string = placeholder.populate(terminal)
     elif isinstance(placeholder, StylePlaceholder):
         string = placeholder.populate(styles, terminal)
-    elif isinstance(placeholder, NullPlaceholder):
-        string = placeholder.populate()
     elif isinstance(placeholder, PlaceholderGroup):
         string = placeholder.populate(terminal, styles)
     else:
@@ -18,6 +16,24 @@ def _populate_placeholder(placeholder, terminal, styles):
             "Can't populate styling placeholder object {!r} with type "
             "{}".format(placeholder, type(placeholder)))
     return string
+
+
+class EscapeSequenceStack:
+    def __init__(self, esc_seq):
+        self._stack = []
+        if esc_seq:
+            self.push(esc_seq)
+
+    def push(self, esc_seq):
+        self._stack.append(esc_seq)
+
+    def pop(self):
+        '''Pops the last escape sequence from the stack *and returns a string
+        containing all the remaining escape sequences that should be in effect
+        on the terminal*.
+        '''
+        self._stack.pop()
+        return ''.join(self._stack)
 
 
 class Placeholder(metaclass=ABCMeta):
@@ -47,14 +63,6 @@ class Placeholder(metaclass=ABCMeta):
     @abstractmethod
     def populate(self, obj):
         pass
-
-
-class NullPlaceholder(Placeholder):
-    def __init__(self):
-        super().__init__(None)
-
-    def populate(self):
-        return ''
 
 
 class FormatPlaceholder(Placeholder):
@@ -169,28 +177,43 @@ class StringComponentSpec(metaclass=ABCMeta):
         other = self._sanitise_other(other)
         return StringWithFormatting((other, self))
 
-    def populate(self, terminal, styles):
+    def chunk(self, regex):
+        if isinstance(self.content, StringComponentSpec):
+            chunks = self.content.chunk(regex)
+        else:
+            chunks = regex.split(self.content)
+        chunks = [self.__class__(self.placeholder, c) for c in chunks if c]
+        return chunks
+
+    def populate(self, terminal, styles, esc_seq_stack):
         if self.content is None:
             raise ValueError(
                 '{!r} does not have any content, yet junction is trying to '
                 'draw it to the screen - a styling object must be called with '
                 'a content string before it is to be drawn'.format(self))
-        return (
-            _populate_placeholder(self.placeholder, terminal, styles) +
-            self.content)
+        esc_seq = _populate_placeholder(self.placeholder, terminal, styles)
+        esc_seq_stack.push(esc_seq)
+        if isinstance(self.content, StringComponentSpec):
+            content = self.content.populate(
+                terminal, styles, esc_seq_stack)
+        else:
+            content = self.content
+        return esc_seq + content + esc_seq_stack.pop()
 
 
 class NullComponentSpec(StringComponentSpec):
-    _placeholder = NullPlaceholder()
-
     def __init__(self, *args):
         if len(args) == 1:
-            super().__init__(placeholder=self._placeholder, content=args[0])
+            super().__init__(placeholder=None, content=args[0])
         else:
             super().__init__(*args)
 
     def __repr__(self):
         return '{}({!r})'.format(self.__class__.__name__, self.content)
+
+    def populate(self, *args, **kwargs):
+        assert isinstance(self.content, str)
+        return self.content
 
 
 class ParameterizingSpec(StringComponentSpec):
@@ -368,19 +391,12 @@ class StringWithFormatting:
     def chunk(self, regex):
         chunked_specs = []
         for spec in self._content:
-            # We have to split up each string_spec in our content manually,
-            # because we use a regex
-            chunks = regex.split(spec.content)
-            # We then have to take that raw string, wrap it back up in its
-            # appropriate string spec, and we make a StringWithFormatting out
-            # of it for good measure
-            chunks = [
-                self.__class__(spec.__class__(spec.placeholder, c)) for c in
-                chunks if c]
+            chunks = spec.chunk(regex)
+            chunks = [self.__class__(c) for c in chunks]
             chunked_specs.extend(chunks)
-        # Because we started by iterating over string_specs, we might have
-        # two 'chunks' in result that are actually part of the same logical
-        # word, so we need to recombine them
+        # Because we started by iterating over the individual specs in our
+        # content, we might have two 'chunks' in result that are actually part
+        # of the same logical word, so we need to recombine them
         result = []
         iterator = iter(chunked_specs)
         prev_swf = iterator.__next__()  # Cheeky steal of the first one :-)
@@ -406,8 +422,10 @@ class StringWithFormatting:
             total = (first,) + self._content[1:-1] + (last,)
             return self.__class__(total)
 
-    def populate(self, terminal, styles=None):
-        return ''.join(s.populate(terminal, styles) for s in self._content)
+    def populate(self, terminal, styles=None, esc_seq_stack=None):
+        # FIXME: esc_seq_stack should probably be mandatory
+        return ''.join(
+            s.populate(terminal, styles, esc_seq_stack) for s in self._content)
 
 
 class TextWrapper:
