@@ -9,6 +9,8 @@ def _populate_placeholder(placeholder, terminal, styles):
         string = placeholder.populate(terminal)
     elif isinstance(placeholder, StylePlaceholder):
         string = placeholder.populate(styles, terminal)
+    elif isinstance(placeholder, NullPlaceholder):
+        string = placeholder.populate()
     elif isinstance(placeholder, PlaceholderGroup):
         string = placeholder.populate(terminal, styles)
     else:
@@ -45,6 +47,14 @@ class Placeholder(metaclass=ABCMeta):
     @abstractmethod
     def populate(self, obj):
         pass
+
+
+class NullPlaceholder(Placeholder):
+    def __init__(self):
+        super().__init__(None)
+
+    def populate(self):
+        return ''
 
 
 class FormatPlaceholder(Placeholder):
@@ -165,23 +175,22 @@ class StringComponentSpec(metaclass=ABCMeta):
                 '{!r} does not have any content, yet junction is trying to '
                 'draw it to the screen - a styling object must be called with '
                 'a content string before it is to be drawn'.format(self))
-        return _populate_placeholder(self.placeholder, terminal, styles)
+        return (
+            _populate_placeholder(self.placeholder, terminal, styles) +
+            self.content)
 
 
 class NullComponentSpec(StringComponentSpec):
+    _placeholder = NullPlaceholder()
+
     def __init__(self, *args):
         if len(args) == 1:
-            super().__init__(placeholder=None, content=args[0])
+            super().__init__(placeholder=self._placeholder, content=args[0])
         else:
             super().__init__(*args)
 
     def __repr__(self):
         return '{}({!r})'.format(self.__class__.__name__, self.content)
-
-    def populate(self, terminal, styles):
-        # FIXME: probably factor out this more nicely, so that we get the
-        # content check from our parent
-        return ''
 
 
 class ParameterizingSpec(StringComponentSpec):
@@ -398,7 +407,7 @@ class StringWithFormatting:
             return self.__class__(total)
 
     def populate(self, terminal, styles=None):
-        ''.join(s.populate(terminal, styles) for s in self._content)
+        return ''.join(s.populate(terminal, styles) for s in self._content)
 
 
 class TextWrapper:

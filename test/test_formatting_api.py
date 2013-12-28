@@ -1,10 +1,11 @@
 from unittest import TestCase
+from io import StringIO
 
 from junction.formatting import (
-    StringComponentSpec, ParameterizingSpec, NullComponentSpec,
-    FormatPlaceholder, StylePlaceholder, FormatSpecFactory, StyleSpecFactory,
+    StringComponentSpec, NullComponentSpec, FormatPlaceholder,
+    StylePlaceholder, FormatSpecFactory, StyleSpecFactory,
     StringWithFormatting, wrap)
-from junction.terminal import Terminal
+from junction import Terminal, Text
 
 
 class TestStringComponentSpec(TestCase):
@@ -149,6 +150,20 @@ class TestStringWithFormatting(TestCase):
         expected = StringWithFormatting(
             self.format.blue(self.format.underline('orld!')))
         self.assertEqual(swf[7:12], expected)
+
+    def test_end_to_end(self):
+        terminal = Terminal(force_styling=True)
+        terminal.stream = StringIO()
+        text = Text(self.swf)
+        text.draw(6, 2, terminal=terminal)
+        result = terminal.stream.getvalue()
+        # FIXME: 'Hello ' in the expected result below shouldn't have a
+        # trailing space in it, because the word wrapping initiated by Text
+        # should have stripped it off.
+        expected = (
+            terminal.move(0, 0) + 'Hello ' + terminal.move(1, 0) +
+            terminal.blue + 'World!')
+        self.assertEqual(repr(result), repr(expected))
 
 
 class TestTextWrapper(TestCase):

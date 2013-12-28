@@ -72,22 +72,13 @@ class TestDisplayElements(TestCase):
 
     def test_text_with_formatting(self):
         content = (
-            Root.format.bold + 'The ' + Root.format.normal + 'quick ' +
-            Root.format.red('brown') + ' fox ' +
-            Root.format.underline('jumps'))  # +
-            #' over {t.green_on_white}the lazy{t.normal} dog'.format(
-            #    t=self.terminal))
-            # FIXME: can't yet handle .format insertion of Format objects into
-            # strings
+            Root.format.bold('The ') + 'quick ' + Root.format.red('brown') +
+            ' fox ' + Root.format.underline('jumps'))
         text = Text(content)
         expected = [
-            (Root.format.bold + 'The ' + Root.format.normal + 'quick ' +
-             Root.format.red + 'brown' + Root.format.normal + '  '),
-            ('fox ' + Root.format.underline + 'jumps' +
-             Root.format.normal + Root.format.normal + '        '),
-            #+ ' over ' + Root.format.green_on_white),
-            #('the lazy' + Root.format.normal + ' dog' +
-            # Root.format.normal + '     '),
+            (Root.format.bold('The ') + 'quick ' + Root.format.red('brown') +
+             '  '),
+            ('fox ' + Root.format.underline('jumps') + '        '),
             '                 ',
             '                 ']
         actual = text.get_all_blocks(17, 4)[0].lines
