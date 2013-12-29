@@ -195,12 +195,14 @@ class TestDefaultFormatting(TestCase):
 
     def test_simple_default_formatting(self):
         fill = Fill()
-        fill.default_format = self.format.bold + self.format.green
+        fill.default_format = (
+            self.format.bold + self.format.green + self.format.underline)
         fill.draw(3, 1, terminal=self.terminal)
         result = self.terminal.stream.getvalue()
         expected = (
             self.terminal.normal + self.terminal.bold + self.terminal.green +
-            self.terminal.move(0, 0) + '...' + self.terminal.normal)
+            self.terminal.underline + self.terminal.move(0, 0) + '...' +
+            self.terminal.normal)
         self.assertEqual(repr(result), repr(expected))
 
     def test_default_formatting_with_other_formatting(self):
