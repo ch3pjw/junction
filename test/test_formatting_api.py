@@ -158,13 +158,18 @@ class TestStringWithFormatting(TestCase):
         text = Text(self.swf)
         text.draw(6, 2, terminal=terminal)
         result = terminal.stream.getvalue()
-        # FIXME: 'Hello ' in the expected result below shouldn't have a
-        # trailing space in it, because the word wrapping initiated by Text
-        # should have stripped it off.
         expected = (
             terminal.normal + terminal.move(0, 0) + 'Hello ' +
             terminal.move(1, 0) + terminal.blue + terminal.underline +
             'World!' + terminal.normal + terminal.blue + terminal.normal)
+        self.assertEqual(repr(result), repr(expected))
+        terminal.stream = StringIO()
+        text.content = 'Plainly formatted info'
+        text.update(terminal=terminal)
+        result = terminal.stream.getvalue()
+        expected = (
+            terminal.normal + terminal.move(0, 0) + 'Plainl' +
+            terminal.move(1, 0) + 'y form')
         self.assertEqual(repr(result), repr(expected))
 
 

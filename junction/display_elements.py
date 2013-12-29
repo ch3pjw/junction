@@ -80,6 +80,7 @@ class Text(ABCDisplayElement):
     @content.setter
     def content(self, value):
         self._content = value
+        self.updated = True
 
     def _get_lines(self, width, height):
         lines = wrap(self.content, width)

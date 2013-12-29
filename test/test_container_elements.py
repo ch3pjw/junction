@@ -123,6 +123,18 @@ class TestContainerElements(TestCase):
             Block(0, 3, ['33333'], fill3.default_format),
             Block(0, 2, ['11111'], fill1.default_format)])
 
+    def test_update_stack(self):
+        fill1 = Fill('1')
+        fill2 = Fill('2')
+        stack = Stack(fill1, fill2)
+        blocks = stack.get_all_blocks(3, 2)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['111'], None),
+            Block(0, 1, ['222'], None)])
+        fill2.default_format = 'new!'
+        blocks = stack.get_updated_blocks()
+        self.assertEqual(blocks, [Block(0, 1, ['222'], 'new!')])
+
     def test_update(self):
         fill1 = Fill('1')
         fill1.default_format = 'format_one'
