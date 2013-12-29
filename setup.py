@@ -16,7 +16,7 @@ setup(
     packages=[
         'junction'],
     extras_require={
-        'development': [
+        'dev': [
             'pep8',
             'mock',
             'nose',
