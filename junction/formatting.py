@@ -96,7 +96,7 @@ class ParamaterizingFormatPlaceholder(FormatPlaceholder):
 
 class StylePlaceholder(Placeholder):
     def populate(self, terminal, styles):
-        style = styles.get(self.attr_name)
+        style = styles[self.attr_name]
         return style.populate(terminal, styles)
 
 
@@ -240,13 +240,25 @@ class FormatPlaceholderFactory:
 
 
 class StylePlaceholderFactory:
-    __slots__ = []  # Ensure noone can store arbitrary attributes on us
+    __slots__ = ['_defined_styles']
 
-    def __getattr__(self, attr_name):
-        if attr_name == '__isabstractmethod__':
+    def __init__(self):
+        super().__setattr__('_defined_styles', {})
+
+    def __getattr__(self, name):
+        if name == '__isabstractmethod__':
             return False
         else:
-            return StylePlaceholder(attr_name)
+            return StylePlaceholder(name)
+
+    def __setattr__(self, name, value):
+        if value is None:
+            del self._defined_styles[name]
+        else:
+            self._defined_styles[name] = value
+
+    def __getitem__(self, name):
+        return self._defined_styles[name]
 
 
 class StringWithFormatting:

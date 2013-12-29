@@ -11,7 +11,7 @@ class Root(ABCUIElement):
     format = FormatPlaceholderFactory()
     style = StylePlaceholderFactory()
 
-    def __init__(self, element=None, styles=None, terminal=None, loop=None):
+    def __init__(self, element=None, terminal=None, loop=None):
         '''Represents the root element of a tree of UI elements. We are
         associated with a Terminal object, so we're in the unique position of
         knowing our own width and height constraints, and are responsible for
@@ -32,7 +32,6 @@ class Root(ABCUIElement):
         self._element = None
         if element:
             self.element = element
-        self.styles = styles
         self.terminal = terminal or get_terminal()
         self.loop = loop or asyncio.get_event_loop()
         self.keyboard = Keyboard()
@@ -87,11 +86,11 @@ class Root(ABCUIElement):
     def draw(self):
         super().draw(
             self.terminal.width, self.terminal.height, terminal=self.terminal,
-            styles=self.styles)
+            styles=self.style)
 
     def update(self):
         super().update(
-            self.default_format, terminal=self.terminal, styles=self.styles)
+            self.default_format, terminal=self.terminal, styles=self.style)
 
     def _get_all_blocks(self, *args, **kwargs):
         return self.element.get_all_blocks(*args, **kwargs)
