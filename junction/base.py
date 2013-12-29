@@ -137,19 +137,19 @@ class ABCUIElement(metaclass=ABCMeta):
                 terminal.stream.write(def_esq_seq)
                 esc_seq_stack.push(def_esq_seq)
             lines = self._populate_lines(
-                block.lines, terminal, styles, esc_seq_stack)
+                block, terminal, styles, esc_seq_stack)
             terminal.draw_lines(lines, block.x, block.y)
             if block.default_format:
                 terminal.stream.write(esc_seq_stack.pop())
         terminal.stream.flush()
 
-    def _populate_lines(self, lines, terminal, styles, esc_seq_stack):
+    def _populate_lines(self, block, terminal, styles, esc_seq_stack):
         '''Takes some lines to draw to the terminal, which may contain
         formatting placeholder objects, and inserts the appropriate concrete
         escapes sequences by using data from the terminal object and styles
         dictionary.
         '''
-        for i, line in enumerate(lines):
+        for i, line in enumerate(block):
             if isinstance(line, StringWithFormatting):
                 line = line.populate(terminal, styles, esc_seq_stack)
             yield line
