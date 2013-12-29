@@ -2,7 +2,7 @@
 from unittest import TestCase
 
 from junction.root import Root
-from junction.display_elements import Fill, Text, ProgressBar
+from junction.display_elements import Fill, Text, Label, ProgressBar
 
 
 class TestDisplayElements(TestCase):
@@ -69,6 +69,11 @@ class TestDisplayElements(TestCase):
             'fox jumps over///',
             'the lazy dog/////']
         self.assertEqual(text.get_all_blocks(17, 4)[0].lines, expected)
+
+    def test_label(self):
+        label = Label('LHR')
+        expected = ['LHR ', '    ']
+        self.assertEqual(label.get_all_blocks(4, 2)[0].lines, expected)
 
     def test_text_with_formatting(self):
         content = (

@@ -59,15 +59,6 @@ class Fill(ABCDisplayElement):
         return [self.char * width] * height
 
 
-class Label(ABCDisplayElement):
-    def __init__(self, content, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.content = content
-
-    def _get_lines(self, width, height):
-        return [self.content]
-
-
 class Text(ABCDisplayElement):
     def __init__(self, content, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -83,10 +74,12 @@ class Text(ABCDisplayElement):
         self.updated = True
 
     def _get_lines(self, width, height):
-        lines = wrap(self.content, width)
-        #if any(isinstance(line, StringWithFormatting) for line in lines):
-        #    lines[-1] += Root.format.normal
-        return lines
+        return wrap(self.content, width)
+
+
+class Label(Text):
+    def _get_lines(self, width, height):
+        return [self.content]
 
 
 class ProgressBar(ABCDisplayElement):
