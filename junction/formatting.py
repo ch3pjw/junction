@@ -200,19 +200,13 @@ class StringComponentSpec:
 
     def populate(self, terminal, styles, esc_seq_stack):
         esc_seq = self.placeholder.populate(terminal, styles)
-        if self.content is None:
-            # Someone might look us up as Root.format.blue, and want to use us
-            # with no content as a definition of what blue is (i.e. just want
-            # to refer to our placeholder directly)
-            return esc_seq
+        esc_seq_stack.push(esc_seq)
+        if isinstance(self.content, StringComponentSpec):
+            content = self.content.populate(
+                terminal, styles, esc_seq_stack)
         else:
-            esc_seq_stack.push(esc_seq)
-            if isinstance(self.content, StringComponentSpec):
-                content = self.content.populate(
-                    terminal, styles, esc_seq_stack)
-            else:
-                content = self.content
-            return esc_seq + content + esc_seq_stack.pop()
+            content = self.content
+        return esc_seq + content + esc_seq_stack.pop()
 
 
 class NullComponentSpec(StringComponentSpec):
