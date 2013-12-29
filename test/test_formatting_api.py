@@ -142,6 +142,9 @@ class TestStringWithFormatting(TestCase):
     def test_str(self):
         self.assertEqual(str(self.swf), 'Hello World!')
 
+    def test_contains(self):
+        self.assertIn('lo', self.swf)
+
     def test_getitem_index(self):
         self.assertEqual(self.swf[2], 'l')
         self.assertEqual(self.swf[7], 'o')
