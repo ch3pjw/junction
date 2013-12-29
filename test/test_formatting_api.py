@@ -78,6 +78,17 @@ class TestPlaceholder(TestCase):
             'h1': self.style.heading,
             'h2': self.style.heading + self.format.red}
 
+    def test_eq(self):
+        self.assertEqual(FormatPlaceholder('red'), FormatPlaceholder('red'))
+        self.assertNotEqual(
+            FormatPlaceholder('red'), FormatPlaceholder('green'))
+        self.assertNotEqual(
+            FormatPlaceholder('blue'), StylePlaceholder('blue'))
+
+    def test_repr(self):
+        self.assertEqual(
+            repr(FormatPlaceholder('red')), "FormatPlaceholder('red')")
+
     def test_populate_format_placeholder(self):
         format_placeholder = FormatPlaceholder('red')
         result = format_placeholder.populate(self.terminal, self.styles)
