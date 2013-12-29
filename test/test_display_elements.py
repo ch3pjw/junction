@@ -2,7 +2,7 @@
 from unittest import TestCase
 
 from junction.root import Root
-from junction.display_elements import Fill, Text, ProgressBar
+from junction.display_elements import Fill, Text, Label, ProgressBar
 
 
 class TestDisplayElements(TestCase):
@@ -35,61 +35,58 @@ class TestDisplayElements(TestCase):
             'the lazy dog     ',
             '                 ']
         self.assertEqual(
-            text._get_cropped_lines(17, 4), expected)
+            text.get_all_blocks(17, 4)[0].lines, expected)
         text = Text(content, halign='center')
         expected = [
             ' The quick brown ',
             '  fox jumps over ',
             '   the lazy dog  ']
-        self.assertEqual(text._get_cropped_lines(17, 3), expected)
+        self.assertEqual(text.get_all_blocks(17, 3)[0].lines, expected)
         text = Text(content, halign='right')
         expected = [
             '  The quick brown fox jumps',
             '          over the lazy dog']
-        self.assertEqual(text._get_cropped_lines(27, 2), expected)
+        self.assertEqual(text.get_all_blocks(27, 2)[0].lines, expected)
         text = Text(content, valign='middle')
         expected = [
             ' ' * len(content),
             ' ' * len(content),
             content,
             ' ' * len(content)]
-        self.assertEqual(text._get_cropped_lines(len(content), 4), expected)
+        self.assertEqual(
+            text.get_all_blocks(len(content), 4)[0].lines, expected)
         text = Text(content, valign='bottom')
         expected = [
             '                 ',
             'The quick brown  ',
             'fox jumps over   ',
             'the lazy dog     ']
-        self.assertEqual(text._get_cropped_lines(17, 4), expected)
+        self.assertEqual(text.get_all_blocks(17, 4)[0].lines, expected)
         text = Text(content, valign='bottom', fillchar='/')
         expected = [
             '/////////////////',
             'The quick brown//',
             'fox jumps over///',
             'the lazy dog/////']
-        self.assertEqual(text._get_cropped_lines(17, 4), expected)
+        self.assertEqual(text.get_all_blocks(17, 4)[0].lines, expected)
+
+    def test_label(self):
+        label = Label('LHR')
+        expected = ['LHR ', '    ']
+        self.assertEqual(label.get_all_blocks(4, 2)[0].lines, expected)
 
     def test_text_with_formatting(self):
         content = (
-            Root.format.bold + 'The ' + Root.format.normal + 'quick ' +
-            Root.format.red('brown') + ' fox ' +
-            Root.format.underline('jumps'))  # +
-            #' over {t.green_on_white}the lazy{t.normal} dog'.format(
-            #    t=self.terminal))
-            # FIXME: can't yet handle .format insertion of Format objects into
-            # strings
+            Root.format.bold('The ') + 'quick ' + Root.format.red('brown') +
+            ' fox ' + Root.format.underline('jumps'))
         text = Text(content)
         expected = [
-            (Root.format.bold + 'The ' + Root.format.normal + 'quick ' +
-             Root.format.red + 'brown' + Root.format.normal + '  '),
-            ('fox ' + Root.format.underline + 'jumps' +
-             Root.format.normal + Root.format.normal + '        '),
-            #+ ' over ' + Root.format.green_on_white),
-            #('the lazy' + Root.format.normal + ' dog' +
-            # Root.format.normal + '     '),
+            (Root.format.bold('The ') + 'quick ' + Root.format.red('brown') +
+             '  '),
+            ('fox ' + Root.format.underline('jumps') + '        '),
             '                 ',
             '                 ']
-        actual = text._get_cropped_lines(17, 4)
+        actual = text.get_all_blocks(17, 4)[0].lines
         self.assertEqual(actual, expected)
 
     def test_progress_bar(self):

@@ -2,12 +2,14 @@ import asyncio
 import signal
 from contextlib import contextmanager
 
-from .formatting import FormatFactory
+from .base import ABCUIElement
+from .formatting import FormatPlaceholderFactory, StylePlaceholderFactory
 from .terminal import get_terminal, Keyboard
 
 
-class Root:
-    format = FormatFactory()
+class Root(ABCUIElement):
+    format = FormatPlaceholderFactory()
+    style = StylePlaceholderFactory()
 
     def __init__(self, element=None, styles=None, terminal=None, loop=None):
         '''Represents the root element of a tree of UI elements. We are
@@ -26,13 +28,17 @@ class Root:
             method. (Optional, we will grab a default if none is provided, and
             the loop can be reassigned so long as we're not currently running.)
         '''
+        super().__init__()
         self._element = None
         if element:
             self.element = element
+        self.styles = styles
         self.terminal = terminal or get_terminal()
         self.loop = loop or asyncio.get_event_loop()
         self.keyboard = Keyboard()
-        self.default_format = None
+        # FIXME: we should probably inherit from ABCContainerElement so that we
+        # get stuff like child.updated tracking by default:
+        self._updated = True
 
     @property
     def element(self):
@@ -45,6 +51,14 @@ class Root:
         self._element = new_element
         if new_element:
             new_element.root = self
+
+    @property
+    def updated(self):
+        return self.element.updated or self._updated
+
+    @updated.setter
+    def updated(self, value):
+        self._updated = True
 
     @contextmanager
     def _handle_screen_resize(self):
@@ -71,11 +85,16 @@ class Root:
             self.loop.run_forever()
 
     def draw(self):
-        blocks = self.element.draw(self.terminal.width, self.terminal.height)
-        self.terminal.draw_blocks(blocks)
-        self.terminal.stream.flush()
+        super().draw(
+            self.terminal.width, self.terminal.height, terminal=self.terminal,
+            styles=self.styles)
 
     def update(self):
-        blocks = self.element.update(self.default_format, self.terminal)
-        self.terminal.draw_blocks(blocks)
-        self.terminal.stream.flush()
+        super().update(
+            self.default_format, terminal=self.terminal, styles=self.styles)
+
+    def _get_all_blocks(self, *args, **kwargs):
+        return self.element.get_all_blocks(*args, **kwargs)
+
+    def _get_updated_blocks(self, *args, **kwargs):
+        return self.element.get_updated_blocks(*args, **kwargs)

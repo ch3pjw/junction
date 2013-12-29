@@ -2,6 +2,9 @@ from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 
 from .terminal import get_terminal
+from .formatting import (
+    StringWithFormatting, EscapeSequenceStack, FormatPlaceholder,
+    PlaceholderGroup)
 
 
 Geometry = namedtuple(
@@ -18,7 +21,11 @@ class Block:
         self.default_format = default_format
 
     def __repr__(self):
-        return 'Block({}, {}, {})'.format(self.x, self.y, self.lines)
+        args = [self.x, self.y, self.lines]
+        if self.default_format:
+            args.append(self.default_format)
+        return '{}({})'.format(
+            self.__class__.__name__, ', '.join(repr(arg) for arg in args))
 
     def __eq__(self, other):
         try:
@@ -111,29 +118,78 @@ class ABCUIElement(metaclass=ABCMeta):
         self.updated = True
 
     def draw(self, width, height, x=0, y=0, x_crop='left', y_crop='top',
-             default_format=None):
-        blocks = self._draw(
-            width, height, x, y, x_crop, y_crop, default_format=default_format)
+             terminal=None, styles=None):
+        blocks = self.get_all_blocks(width, height, x, y, x_crop, y_crop)
+        self._do_draw(blocks, terminal, styles)
+
+    def update(self, default_format=None, terminal=None, styles=None):
+        blocks = self.get_updated_blocks(default_format)
+        self._do_draw(blocks, terminal, styles)
+
+    def _do_draw(self, blocks, terminal, styles):
+        terminal = terminal or get_terminal()
+        styles = styles or {}
+        esc_seq_stack = EscapeSequenceStack(terminal.normal)
+        terminal.stream.write(terminal.normal)
+        for block in blocks:
+            if block.default_format:
+                def_esq_seq = block.default_format.populate(terminal, styles)
+                terminal.stream.write(def_esq_seq)
+                esc_seq_stack.push(def_esq_seq)
+            lines = self._populate_lines(
+                block, terminal, styles, esc_seq_stack)
+            terminal.draw_lines(lines, block.x, block.y)
+            if block.default_format:
+                terminal.stream.write(esc_seq_stack.pop())
+        terminal.stream.flush()
+
+    def _populate_lines(self, block, terminal, styles, esc_seq_stack):
+        '''Takes some lines to draw to the terminal, which may contain
+        formatting placeholder objects, and inserts the appropriate concrete
+        escapes sequences by using data from the terminal object and styles
+        dictionary.
+        '''
+        for i, line in enumerate(block):
+            if isinstance(line, StringWithFormatting):
+                line = line.populate(terminal, styles, esc_seq_stack)
+            yield line
+
+    def get_all_blocks(
+            self, width, height, x=0, y=0, x_crop='left', y_crop='top',
+            default_format=None):
+        if self.default_format:
+            if default_format:
+                default_format = default_format + self.default_format
+            else:
+                default_format = self.default_format
+        blocks = self._get_all_blocks(
+            width, height, x, y, x_crop, y_crop, default_format)
         self._previous_geometry = Geometry(width, height, x, y, x_crop, y_crop)
         self.updated = False
         return blocks
 
     @abstractmethod
-    def _draw(self, width, height, x, y, x_crop, y_crop, default_format):
+    def _get_all_blocks(
+            self, width, height, x, y, x_crop, y_crop, default_format):
         pass
 
-    def update(self, default_format=None, terminal=None):
-        blocks = []
+    def get_updated_blocks(self, default_format=None):
         if self._previous_geometry is None:
             raise ValueError("draw() must be called on {!r} before it can be "
                              "updated".format(self))
+        if self.default_format:
+            if default_format:
+                default_format = default_format + self.default_format
+            else:
+                default_format = self.default_format
+        blocks = []
         if self.updated:
-            blocks.extend(self._update(default_format))
+            blocks.extend(self._get_updated_blocks(default_format))
             self.updated = False
         return blocks
 
     @abstractmethod
-    def _update(self, default_format):
+    def _get_updated_blocks(self, default_format):
         pass
 
     #@abstractmethod
