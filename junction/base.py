@@ -25,7 +25,7 @@ class Block:
         if self.default_format:
             args.append(self.default_format)
         return '{}({})'.format(
-            self.__class__.__name__, ', '.join(str(arg) for arg in args))
+            self.__class__.__name__, ', '.join(repr(arg) for arg in args))
 
     def __eq__(self, other):
         try:
