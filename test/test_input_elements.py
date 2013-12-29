@@ -16,8 +16,8 @@
 from unittest import TestCase
 from mock import Mock
 
-from junction.input_elements import LineBuffer, LineInput
-from junction.terminal import Terminal
+from jcn.input_elements import LineBuffer, LineInput
+from jcn.terminal import Terminal
 
 
 class TestInputElements(TestCase):

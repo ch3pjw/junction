@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
 
-from junction import Input, Root
+from jcn import Input, Root
 
 input_ = Input('')
 root = Root(input_)

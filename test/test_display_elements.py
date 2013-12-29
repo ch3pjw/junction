@@ -16,8 +16,8 @@
 # coding=utf-8
 from unittest import TestCase
 
-from junction.root import Root
-from junction.display_elements import Fill, Text, Label, ProgressBar
+from jcn.root import Root
+from jcn.display_elements import Fill, Text, Label, ProgressBar
 
 
 class TestDisplayElements(TestCase):

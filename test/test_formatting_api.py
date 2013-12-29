@@ -16,12 +16,12 @@
 from unittest import TestCase
 from io import StringIO
 
-from junction.formatting import (
+from jcn.formatting import (
     EscapeSequenceStack, StringComponentSpec, NullComponentSpec,
     FormatPlaceholder, ParamaterizingFormatPlaceholder, StylePlaceholder,
     FormatPlaceholderFactory, StylePlaceholderFactory, StringWithFormatting,
     wrap)
-from junction import Terminal, Text, Fill
+from jcn import Terminal, Text, Fill
 
 
 class TestStringComponentSpec(TestCase):

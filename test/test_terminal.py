@@ -21,8 +21,8 @@ import signal
 import os
 from io import StringIO
 
-from junction import Terminal, get_terminal
-from junction.terminal import Keyboard
+from jcn import Terminal, get_terminal
+from jcn.terminal import Keyboard
 
 
 class TestTerminal(TestCase):
@@ -43,9 +43,9 @@ class TestTerminal(TestCase):
                 getattr(junction_terminal, attr_name),
                 getattr(blessings_terminal, attr_name))
 
-    @patch('junction.terminal.termios', autospec=True)
-    @patch('junction.terminal.signal.signal', autospec=True)
-    @patch('junction.terminal.os.kill', autospec=True)
+    @patch('jcn.terminal.termios', autospec=True)
+    @patch('jcn.terminal.signal.signal', autospec=True)
+    @patch('jcn.terminal.os.kill', autospec=True)
     def test_handle_sigtstp(self, mock_kill, mock_signal, mock_termios):
         # This is quite a poor unit test, in the sense that it basically
         # checks that the code I've written is the code I've written! Any
@@ -81,8 +81,8 @@ class TestTerminal(TestCase):
         term._does_styling = False
         self.assertIsInstance(term.blue, blessings.NullCallableString)
 
-    @patch('junction.terminal.termios', autospec=True)
-    @patch('junction.terminal.tty.setcbreak', autospec=True)
+    @patch('jcn.terminal.termios', autospec=True)
+    @patch('jcn.terminal.tty.setcbreak', autospec=True)
     def test_unbuffered_input(self, mock_setcbreak, mock_termios):
         mock_termios.tcgetattr.return_value = 'Wobble'
         term = Terminal(force_styling=True)

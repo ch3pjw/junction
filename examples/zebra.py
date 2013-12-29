@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
 
-from junction import Root, Text, Zebra, Terminal
+from jcn import Root, Text, Zebra, Terminal
 
 text1 = Text('Some interesting text might go here')
 text2 = Text('The Zebra will help you differentiate lines')

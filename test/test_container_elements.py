@@ -19,11 +19,11 @@ from mock import Mock, patch
 import asyncio
 from io import StringIO
 
-from junction.terminal import Terminal
-from junction.root import Root
-from junction.base import Block
-from junction.display_elements import Fill, ABCDisplayElement
-from junction.container_elements import Box, Stack, Zebra
+from jcn.terminal import Terminal
+from jcn.root import Root
+from jcn.base import Block
+from jcn.display_elements import Fill, ABCDisplayElement
+from jcn.container_elements import Box, Stack, Zebra
 
 
 class DisplayElementForTest(ABCDisplayElement):
@@ -46,8 +46,8 @@ class TestContainerElements(TestCase):
     def test_root(self):
         loop = asyncio.get_event_loop()
         fill = Fill()
-        with patch('junction.Terminal.width', 4), patch(
-                'junction.Terminal.height', 3):
+        with patch('jcn.Terminal.width', 4), patch(
+                'jcn.Terminal.height', 3):
             root = Root(fill, terminal=self.terminal, loop=loop)
             loop.call_soon(loop.stop)
             root.run()

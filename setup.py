@@ -17,17 +17,17 @@ import os
 from setuptools import setup
 
 __version__ = None
-# Populate __version__ using the junction._version module, without importing
+# Populate __version__ using the jcn._version module, without importing
 this_dir_path = os.path.dirname(__file__)
-version_module_path = os.path.join(this_dir_path, 'junction', '_version.py')
+version_module_path = os.path.join(this_dir_path, 'jcn', '_version.py')
 exec(open(version_module_path).read())
 
 readme_path = os.path.join(this_dir_path, 'README.md')
 long_description = open(readme_path).read()
 
 setup(
-    name='junction',
-    description='A Python-based command-line UI framework',
+    name='jcn',
+    description='Junction: A Python-based command-line UI framework',
     long_description=long_description,
     url='https://github.com/ch3pjw/junction/',
     author='Paul Weaver',
@@ -37,7 +37,7 @@ setup(
         'Linux'],
     version=__version__,
     packages=[
-        'junction'],
+        'jcn'],
     install_requires=[
         'blessings',
         'asyncio'],

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
 
-from junction import Root, Fill
+from jcn import Root, Fill
 
 fill = Fill()
 root = Root(fill)

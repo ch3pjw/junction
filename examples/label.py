@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
 
-from junction import Label, Stack, Root
+from jcn import Label, Stack, Root
 
 label1 = Label('This label is left aligned')
 label2 = Label('This label is centred')

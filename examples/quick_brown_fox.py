@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
 
-from junction import Root, Text
+from jcn import Root, Text
 
 # The resulting StringWithFormatting passed to the Text element constructor
 # below illustrates how we try to match up to blessings' ways of doing

@@ -16,7 +16,7 @@
 import asyncio
 from unittest import TestCase
 
-from junction.util import (
+from jcn.util import (
     clamp, weighted_round_robin, crop_or_expand, LoopingCall)
 
 

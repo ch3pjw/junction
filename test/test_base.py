@@ -15,7 +15,7 @@
 
 from unittest import TestCase
 
-from junction.base import ABCUIElement, Block
+from jcn.base import ABCUIElement, Block
 
 
 class TestABCUIElement(TestCase):
