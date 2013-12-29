@@ -55,6 +55,7 @@ setup(
         'Environment :: Console',
         'Environment :: Console :: Curses',
         'Intended Audience :: Developers',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Natural Language :: English',
         'Operating System :: POSIX :: Linux',
         'Topic :: Software Development :: Libraries',
