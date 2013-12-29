@@ -98,6 +98,10 @@ class TestPlaceholder(TestCase):
         result = style_placeholder.populate(self.terminal, self.styles)
         self.assertEqual(result, self.terminal.underline + self.terminal.red)
 
+    def test_bad_addition(self):
+        with self.assertRaises(TypeError):
+            self.format.yellow + 'fail'
+
 
 class TestStringWithFormatting(TestCase):
     def setUp(self):

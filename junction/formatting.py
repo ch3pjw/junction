@@ -41,7 +41,11 @@ class Placeholder:
         if isinstance(other, Placeholder):
             return PlaceholderGroup((self, other))
         else:
-            raise TypeError('FIXME: add message')
+            raise TypeError(
+                "Can't add object of type {} to {!r} - to construct content "
+                "using formatting placeholders, please call the placeholder "
+                "with the content you desire to be formatted".format(
+                    type(other), self))
 
     def __call__(self, content):
         return StringComponentSpec(self, content)
