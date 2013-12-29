@@ -169,13 +169,6 @@ class StringComponentSpec:
     def __getitem__(self, index):
         return self.__class__(self.placeholder, self.content[index])
 
-        if self.content is None:
-            raise ValueError(
-                'Missing content for {}({!r}) - you tried to add styling data '
-                'to an existing content object without first calling your '
-                'style to specifiy the newly styled content'.format(
-                    self.__class__.__name__, self.placeholder))
-
     def _sanitise_other(self, other):
         if isinstance(other, str):
             return NullComponentSpec(other)
