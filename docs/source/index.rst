@@ -6,12 +6,13 @@
 Welcome to jcn's documentation!
 ===============================
 
-.. automodule:: jcn
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
+
+   api
 
 
 
