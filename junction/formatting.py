@@ -149,8 +149,13 @@ class StringComponentSpec:
         str_method = getattr(self.content, attr_name)
         @wraps(str_method)
         def do_str_method(*args, **kwargs):
-            new_str = str_method(*args, **kwargs)
-            return self.__class__(self.placeholder, new_str)
+            result = str_method(*args, **kwargs)
+            if isinstance(result, str):
+                return self.__class__(self.placeholder, result)
+            elif isinstance(result, list):
+                return [self.__class__(self.placeholder, s) for s in result]
+            else:
+                return result
         return do_str_method
 
     def __eq__(self, other):
@@ -398,6 +403,14 @@ class StringWithFormatting:
             last = self._content[-1].rstrip()
             total = (first,) + self._content[1:-1] + (last,)
             return self.__class__(total)
+
+    def split(self, sep=None):
+        split_specs = []
+        for spec in self._content:
+            split_spec = spec.split(sep)
+            split_spec = [self.__class__(s) for s in split_spec]
+            split_specs.extend(split_spec)
+        return split_specs
 
     def populate(self, terminal, styles=None, esc_seq_stack=None):
         # FIXME: esc_seq_stack should probably be mandatory
