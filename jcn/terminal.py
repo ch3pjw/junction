@@ -39,6 +39,9 @@ def _override_sugar(func):
 
 
 class Terminal(blessings.Terminal):
+    '''FIXME: Reference :mod:`blessings` and it's :class:`blessings.Terminal`
+    Explain the role of the :class:`Terminal` and our additions.
+    '''
     def __init__(self, *args, infile=None, handle_signals=True, **kwargs):
         super().__init__(*args, **kwargs)
         self.infile = infile or sys.stdin
@@ -121,6 +124,9 @@ class Terminal(blessings.Terminal):
         '''Sets cbreak on the current tty so that input from the user isn't
         parcelled up and delivered with each press of return, but delivered on
         each keystroke.
+
+        FIXME: expand so as to clarify the level at which users need to care
+        about this!
         '''
         if self.is_a_tty:
             orig_tty_attrs = termios.tcgetattr(self.stream)
@@ -135,6 +141,8 @@ class Terminal(blessings.Terminal):
 
     @contextmanager
     def nonblocking_input(self):
+        '''FIXME: explain about this, even if we steer users away from it.
+        '''
         if hasattr(self.infile, 'fileno'):
             # Use fcntl to set stdin to non-blocking. WARNING - this is not
             # particularly portable!
@@ -148,6 +156,8 @@ class Terminal(blessings.Terminal):
             yield
 
     def draw_lines(self, lines, x=0, y=0):
+        '''FIXME:
+        '''
         for y, line in enumerate(lines, start=y):
             self.stream.write(self.move(y, x))
             self.stream.write(line)
@@ -156,6 +166,10 @@ _terminal = Terminal()
 
 
 def get_terminal():
+    '''Explain why we have a :func:`get_terminal` - i.e. it's like the
+    :func:`asyncio.get_event_loop` in that it will always return us a singleton
+    instance. (If indeed that's something we actually care about any more?)
+    '''
     return _terminal
 
 

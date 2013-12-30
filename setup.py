@@ -25,7 +25,7 @@ exec(open(version_module_path).read())
 readme_path = os.path.join(this_dir_path, 'README.md')
 long_description = open(readme_path).read()
 
-setup(
+kwargs = dict(
     name='jcn',
     description='Junction: A Python-based command-line UI framework',
     long_description=long_description,
@@ -47,7 +47,10 @@ setup(
             'mock',
             'nose',
             'nose-progressive',
-            'coverage']},
+            'coverage'],
+        'docs': [
+            'Sphinx',
+            'sphinx_bootstrap_theme']},
     classifiers=[
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
@@ -64,3 +67,6 @@ setup(
         'Topic :: Software Development :: User Interfaces',
         'Topic :: Software Development :: Widget Sets']
 )
+
+if __name__ == '__main__':
+    setup(**kwargs)
