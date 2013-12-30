@@ -49,7 +49,8 @@ kwargs = dict(
             'nose-progressive',
             'coverage'],
         'docs': [
-            'Sphinx']},
+            'Sphinx',
+            'sphinx_bootstrap_theme']},
     classifiers=[
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
