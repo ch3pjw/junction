@@ -370,12 +370,16 @@ class StringWithFormatting:
         else:
             return str(self)[index]
 
-    def chunk(self, regex):
-        chunked_specs = []
+    def _apply_str_method(self, method_name, *args, **kwargs):
+        total_specs = []
         for spec in self._content:
-            chunks = spec.chunk(regex)
-            chunks = [self.__class__(c) for c in chunks]
-            chunked_specs.extend(chunks)
+            specs = getattr(spec, method_name)(*args, **kwargs)
+            specs = map(self.__class__, specs)
+            total_specs.extend(specs)
+        return total_specs
+
+    def chunk(self, regex):
+        chunked_specs = self._apply_str_method('chunk', regex)
         # Because we started by iterating over the individual specs in our
         # content, we might have two 'chunks' in result that are actually part
         # of the same logical word, so we need to recombine them
@@ -405,12 +409,7 @@ class StringWithFormatting:
             return self.__class__(total)
 
     def split(self, sep=None):
-        split_specs = []
-        for spec in self._content:
-            split_spec = spec.split(sep)
-            split_spec = [self.__class__(s) for s in split_spec]
-            split_specs.extend(split_spec)
-        return split_specs
+        return self._apply_str_method('split', sep)
 
     def populate(self, terminal, styles=None, esc_seq_stack=None):
         # FIXME: esc_seq_stack should probably be mandatory
