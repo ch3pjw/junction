@@ -370,35 +370,39 @@ class StringWithFormatting:
         else:
             return str(self)[index]
 
-    def _apply_str_method(self, method_name, *args, **kwargs):
+    def _apply_str_method(self, method_name, *args, reference, **kwargs):
+        '''Applies the named method of str to self by calling it on each of our
+        component specs and aggregating the return values correctly.
+
+        :parameter method_name: the name of the (*list-returning*) str method
+            to call
+        :parameter reference: a reference result (i.e. the result of the method
+            call on a normal string) so that we can fix any breaks in our
+            return values caused by boundaries between formats, rather than the
+            called method.
+        '''
         strings_with_formatting = []
         for spec in self._content:
             specs = getattr(spec, method_name)(*args, **kwargs)
             strings_with_formatting.extend(map(self.__class__, specs))
-        return strings_with_formatting
+        result = []
+        for str_unit in reference:
+            if str_unit:
+                formatted_unit = strings_with_formatting.pop(0)
+                while True:
+                    if str(formatted_unit) == str_unit:
+                        result.append(formatted_unit)
+                        break
+                    formatted_unit += strings_with_formatting.pop(0)
+        return result
 
     def chunk(self, regex):
-        chunked_specs = self._apply_str_method('chunk', regex)
-        # Because we started by iterating over the individual specs in our
-        # content, we might have two 'chunks' in result that are actually part
-        # of the same logical word, so we need to recombine them
-        result = []
-        iterator = iter(chunked_specs)
-        prev_swf = iterator.__next__()  # Cheeky steal of the first one :-)
-        for swf in iterator:
-            if len(prev_swf.strip()) != 0 and len(swf.strip()) != 0:
-                # Neither string is whitespace
-                prev_swf = prev_swf + swf
-                continue
-            else:
-                result.append(prev_swf)
-                prev_swf = swf
-        result.append(prev_swf)
-        return result
+        reference = regex.split(str(self))
+        return self._apply_str_method('chunk', regex, reference=reference)
 
     def strip(self):
         if len(self._content) == 0:
-            return self.__class__(self)
+            return self
         elif len(self._content) == 1:
             return self.__class__(self._content[0].strip())
         else:
@@ -408,20 +412,12 @@ class StringWithFormatting:
             return self.__class__(total)
 
     def split(self, sep=None):
-        strings_with_formatting = self._apply_str_method('split', sep)
-        split_str_reference = str(self).split()
-        result = []
-        for str_unit in split_str_reference:
-            formatted_unit = strings_with_formatting.pop(0)
-            while True:
-                if str(formatted_unit) == str_unit:
-                    result.append(formatted_unit)
-                    break
-                formatted_unit += strings_with_formatting.pop(0)
-        return result
+        return self._apply_str_method(
+            'split', sep, reference=str(self).split())
 
     def splitlines(self):
-        return self._apply_str_method('splitlines')
+        return self._apply_str_method(
+            'splitlines', reference=str(self).splitlines())
 
     def populate(self, terminal, styles=None, esc_seq_stack=None):
         # FIXME: esc_seq_stack should probably be mandatory
