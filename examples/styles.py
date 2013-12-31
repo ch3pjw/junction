@@ -3,7 +3,7 @@ from junction import Root, Text
 
 Root.style.heading = Root.format.underline
 Root.style.h1 = Root.style.heading + Root.format.bold
-Root.style.h2 = Root.style.heading + Root.format.color(230)
+Root.style.h2 = Root.style.heading + Root.format.color(240)
 
 text = Text(
     Root.style.h1('Disclaimer:\n') +
