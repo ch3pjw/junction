@@ -408,7 +408,20 @@ class StringWithFormatting:
             return self.__class__(total)
 
     def split(self, sep=None):
-        return self._apply_str_method('split', sep)
+        strings_with_formatting = self._apply_str_method('split', sep)
+        split_str_reference = str(self).split()
+        result = []
+        for str_unit in split_str_reference:
+            formatted_unit = strings_with_formatting.pop(0)
+            while True:
+                if str(formatted_unit) == str_unit:
+                    result.append(formatted_unit)
+                    break
+                formatted_unit += strings_with_formatting.pop(0)
+        return result
+
+    def splitlines(self):
+        return self._apply_str_method('splitlines')
 
     def populate(self, terminal, styles=None, esc_seq_stack=None):
         # FIXME: esc_seq_stack should probably be mandatory
