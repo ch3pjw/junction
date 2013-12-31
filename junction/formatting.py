@@ -371,12 +371,11 @@ class StringWithFormatting:
             return str(self)[index]
 
     def _apply_str_method(self, method_name, *args, **kwargs):
-        total_specs = []
+        strings_with_formatting = []
         for spec in self._content:
             specs = getattr(spec, method_name)(*args, **kwargs)
-            specs = map(self.__class__, specs)
-            total_specs.extend(specs)
-        return total_specs
+            strings_with_formatting.extend(map(self.__class__, specs))
+        return strings_with_formatting
 
     def chunk(self, regex):
         chunked_specs = self._apply_str_method('chunk', regex)
