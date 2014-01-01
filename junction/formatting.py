@@ -370,6 +370,25 @@ class StringWithFormatting:
         else:
             return str(self)[index]
 
+    def __getattr__(self, name):
+        '''We attemt to provide access to all methods that are available on a
+        regular str object, whilst wrapping up answers appropriately.
+        '''
+        str_cls_method = getattr(str, name)
+        @wraps(str_cls_method)
+        def str_method_executor(*args, **kwargs):
+            reference = str_cls_method(str(self), *args, **kwargs)
+            if isinstance(reference, list):
+                return self._apply_str_method(
+                    name, *args, reference=reference, **kwargs)
+            elif isinstance(reference, str):
+                raise NotImplementedError(
+                    "str method {!r} has not yet been implemented for a {}, "
+                    "sorry :-(".format(name, self.__class__.__name__))
+            else:
+                return reference
+        return str_method_executor
+
     def _apply_str_method(self, method_name, *args, reference, **kwargs):
         '''Applies the named method of str to self by calling it on each of our
         component specs and aggregating the return values correctly.
@@ -410,14 +429,6 @@ class StringWithFormatting:
             last = self._content[-1].rstrip()
             total = (first,) + self._content[1:-1] + (last,)
             return self.__class__(total)
-
-    def split(self, sep=None):
-        return self._apply_str_method(
-            'split', sep, reference=str(self).split())
-
-    def splitlines(self):
-        return self._apply_str_method(
-            'splitlines', reference=str(self).splitlines())
 
     def populate(self, terminal, styles=None, esc_seq_stack=None):
         # FIXME: esc_seq_stack should probably be mandatory
