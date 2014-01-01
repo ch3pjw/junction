@@ -1,4 +1,4 @@
-from junction import Root, Text
+from jcn import Root, Text
 
 
 Root.style.heading = Root.format.underline
