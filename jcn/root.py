@@ -55,13 +55,27 @@ class Root(ABCUIElement):
     format = FormatPlaceholderFactory()
     style = StylePlaceholderFactory()
 
-    def __init__(self, element=None, styles=None, terminal=None, loop=None):
+    def __init__(self, element=None, terminal=None, loop=None):
+        '''Represents the root element of a tree of UI elements. We are
+        associated with a Terminal object, so we're in the unique position of
+        knowing our own width and height constraints, and are responsible for
+        passing those down the tree when we are asked to draw ourselves.
+
+        :parameter element: The element which will be drawn when the root is
+            drawn. (Optional, can be reassigned at any time.)
+        :parameter styles: A dictionary mapping names to particular Format or
+            StringWithFormatting objects. (Optional.)
+        :parameter terminal: An instnace of a junction.Terminal object to use
+            for communication with your TTY. (Optional, we will grab a default
+            and can be reassigned so long as we're not currently running.)
+        :parameter loop: The asyncio event loop to use for the main ``run()``
+            method. (Optional, we will grab a default if none is provided, and
+            the loop can be reassigned so long as we're not currently running.)
+        '''
         super().__init__()
         self._element = None
         if element:
             self.element = element
-        # FIXME: styles will need to go
-        self.styles = styles
         # FIXME: should terminal and loop be passed in for run() only?
         self.terminal = terminal or get_terminal()
         self.loop = loop or asyncio.get_event_loop()
@@ -121,13 +135,13 @@ class Root(ABCUIElement):
         '''
         super().draw(
             self.terminal.width, self.terminal.height, terminal=self.terminal,
-            styles=self.styles)
+            styles=self.style)
 
     def update(self):
         '''FIXME
         '''
         super().update(
-            self.default_format, terminal=self.terminal, styles=self.styles)
+            self.default_format, terminal=self.terminal, styles=self.style)
 
     def _get_all_blocks(self, *args, **kwargs):
         return self.element.get_all_blocks(*args, **kwargs)

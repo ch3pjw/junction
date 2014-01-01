@@ -111,7 +111,7 @@ class ParamaterizingFormatPlaceholder(FormatPlaceholder):
 
 class StylePlaceholder(Placeholder):
     def populate(self, terminal, styles):
-        style = styles.get(self.attr_name)
+        style = styles[self.attr_name]
         return style.populate(terminal, styles)
 
 
@@ -164,8 +164,13 @@ class StringComponentSpec:
         str_method = getattr(self.content, attr_name)
         @wraps(str_method)
         def do_str_method(*args, **kwargs):
-            new_str = str_method(*args, **kwargs)
-            return self.__class__(self.placeholder, new_str)
+            result = str_method(*args, **kwargs)
+            if isinstance(result, str):
+                return self.__class__(self.placeholder, result)
+            elif isinstance(result, list):
+                return [self.__class__(self.placeholder, s) for s in result]
+            else:
+                return result
         return do_str_method
 
     def __eq__(self, other):
@@ -255,13 +260,25 @@ class FormatPlaceholderFactory:
 
 
 class StylePlaceholderFactory:
-    __slots__ = []  # Ensure noone can store arbitrary attributes on us
+    __slots__ = ['_defined_styles']
 
-    def __getattr__(self, attr_name):
-        if attr_name == '__isabstractmethod__':
+    def __init__(self):
+        super().__setattr__('_defined_styles', {})
+
+    def __getattr__(self, name):
+        if name == '__isabstractmethod__':
             return False
         else:
-            return StylePlaceholder(attr_name)
+            return StylePlaceholder(name)
+
+    def __setattr__(self, name, value):
+        if value is None:
+            del self._defined_styles[name]
+        else:
+            self._defined_styles[name] = value
+
+    def __getitem__(self, name):
+        return self._defined_styles[name]
 
 
 class StringWithFormatting:
@@ -368,32 +385,58 @@ class StringWithFormatting:
         else:
             return str(self)[index]
 
-    def chunk(self, regex):
-        chunked_specs = []
-        for spec in self._content:
-            chunks = spec.chunk(regex)
-            chunks = [self.__class__(c) for c in chunks]
-            chunked_specs.extend(chunks)
-        # Because we started by iterating over the individual specs in our
-        # content, we might have two 'chunks' in result that are actually part
-        # of the same logical word, so we need to recombine them
-        result = []
-        iterator = iter(chunked_specs)
-        prev_swf = iterator.__next__()  # Cheeky steal of the first one :-)
-        for swf in iterator:
-            if len(prev_swf.strip()) != 0 and len(swf.strip()) != 0:
-                # Neither string is whitespace
-                prev_swf = prev_swf + swf
-                continue
+    def __getattr__(self, name):
+        '''We attemt to provide access to all methods that are available on a
+        regular str object, whilst wrapping up answers appropriately.
+        '''
+        str_cls_method = getattr(str, name)
+        @wraps(str_cls_method)
+        def str_method_executor(*args, **kwargs):
+            reference = str_cls_method(str(self), *args, **kwargs)
+            if isinstance(reference, list):
+                return self._apply_str_method(
+                    name, *args, reference=reference, **kwargs)
+            elif isinstance(reference, str):
+                raise NotImplementedError(
+                    "str method {!r} has not yet been implemented for a {}, "
+                    "sorry :-(".format(name, self.__class__.__name__))
             else:
-                result.append(prev_swf)
-                prev_swf = swf
-        result.append(prev_swf)
+                return reference
+        return str_method_executor
+
+    def _apply_str_method(self, method_name, *args, reference, **kwargs):
+        '''Applies the named method of str to self by calling it on each of our
+        component specs and aggregating the return values correctly.
+
+        :parameter method_name: the name of the (*list-returning*) str method
+            to call
+        :parameter reference: a reference result (i.e. the result of the method
+            call on a normal string) so that we can fix any breaks in our
+            return values caused by boundaries between formats, rather than the
+            called method.
+        '''
+        strings_with_formatting = []
+        for spec in self._content:
+            specs = getattr(spec, method_name)(*args, **kwargs)
+            strings_with_formatting.extend(map(self.__class__, specs))
+        result = []
+        for str_unit in reference:
+            if str_unit:
+                formatted_unit = strings_with_formatting.pop(0)
+                while True:
+                    if str(formatted_unit) == str_unit:
+                        result.append(formatted_unit)
+                        break
+                    formatted_unit += strings_with_formatting.pop(0)
         return result
+
+    def chunk(self, regex):
+        reference = regex.split(str(self))
+        return self._apply_str_method('chunk', regex, reference=reference)
 
     def strip(self):
         if len(self._content) == 0:
-            return self.__class__(self)
+            return self
         elif len(self._content) == 1:
             return self.__class__(self._content[0].strip())
         else:

@@ -89,7 +89,11 @@ class Text(ABCDisplayElement):
         self.updated = True
 
     def _get_lines(self, width, height):
-        return wrap(self.content, width)
+        unwrapped_lines = self.content.splitlines()
+        result = []
+        for line in unwrapped_lines:
+            result.extend(wrap(line, width))
+        return result
 
 
 class Label(Text):

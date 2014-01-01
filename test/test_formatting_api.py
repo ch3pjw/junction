@@ -185,6 +185,14 @@ class TestStringWithFormatting(TestCase):
             self.format.blue(self.format.underline('orld!')))
         self.assertEqual(self.swf[7:12], expected)
 
+    def test_splitlines(self):
+        swf = self.format.red('hello\nworld') + '\ntea'
+        expected = [
+            StringWithFormatting(self.format.red('hello')),
+            StringWithFormatting(self.format.red('world')),
+            StringWithFormatting('tea')]
+        self.assertEqual(swf.splitlines(), expected)
+
     def test_end_to_end(self):
         terminal = Terminal(force_styling=True)
         terminal.stream = StringIO()
