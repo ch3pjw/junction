@@ -142,6 +142,43 @@ class PlaceholderGroup:
         return escape_sequence
 
 
+class FormatPlaceholderFactory:
+    '''FIXME: document this
+    '''
+    __slots__ = []  # Ensure noone can store arbitrary attributes on us
+
+    def __getattr__(self, attr_name):
+        if attr_name == '__isabstractmethod__':
+            return False
+        else:
+            if attr_name in ('color', 'on_color'):
+                return ParamaterizingFormatPlaceholder(attr_name)
+            else:
+                return FormatPlaceholder(attr_name)
+
+
+class StylePlaceholderFactory:
+    __slots__ = ['_defined_styles']
+
+    def __init__(self):
+        super().__setattr__('_defined_styles', {})
+
+    def __getattr__(self, name):
+        if name == '__isabstractmethod__':
+            return False
+        else:
+            return StylePlaceholder(name)
+
+    def __setattr__(self, name, value):
+        if value is None:
+            del self._defined_styles[name]
+        else:
+            self._defined_styles[name] = value
+
+    def __getitem__(self, name):
+        return self._defined_styles[name]
+
+
 class StringComponentSpec:
     '''A string component specification is an object that will be used to form
     part of a string-like object that contains formatting information as well
@@ -243,43 +280,6 @@ class NullComponentSpec(StringComponentSpec):
     def populate(self, *args, **kwargs):
         assert isinstance(self.content, str)
         return self.content
-
-
-class FormatPlaceholderFactory:
-    '''FIXME: document this
-    '''
-    __slots__ = []  # Ensure noone can store arbitrary attributes on us
-
-    def __getattr__(self, attr_name):
-        if attr_name == '__isabstractmethod__':
-            return False
-        else:
-            if attr_name in ('color', 'on_color'):
-                return ParamaterizingFormatPlaceholder(attr_name)
-            else:
-                return FormatPlaceholder(attr_name)
-
-
-class StylePlaceholderFactory:
-    __slots__ = ['_defined_styles']
-
-    def __init__(self):
-        super().__setattr__('_defined_styles', {})
-
-    def __getattr__(self, name):
-        if name == '__isabstractmethod__':
-            return False
-        else:
-            return StylePlaceholder(name)
-
-    def __setattr__(self, name, value):
-        if value is None:
-            del self._defined_styles[name]
-        else:
-            self._defined_styles[name] = value
-
-    def __getitem__(self, name):
-        return self._defined_styles[name]
 
 
 class StringWithFormatting:
