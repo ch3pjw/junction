@@ -221,6 +221,8 @@ class StringComponentSpec:
     def populate(self, terminal, styles, esc_seq_stack):
         esc_seq = self.placeholder.populate(terminal, styles)
         esc_seq_stack.push(esc_seq)
+        # FIXME: should this duck-type on populate? Currently, what if we put a
+        # StringWithFormatting as content?!
         if isinstance(self.content, StringComponentSpec):
             content = self.content.populate(
                 terminal, styles, esc_seq_stack)

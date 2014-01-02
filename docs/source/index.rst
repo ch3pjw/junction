@@ -11,10 +11,10 @@ breeze.
    :maxdepth: 2
 
    api
+   formatting
 .. Will want something like: UI elements, with sub categories for display and
    container elements...
 .. Will also want a full-blown 'here are all the classes' document
-
 
 
 Indices and tables
