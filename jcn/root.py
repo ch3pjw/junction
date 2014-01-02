@@ -26,7 +26,7 @@ class Root(ABCUIElement):
     '''
     :parameter element: The element that will be drawn when the root is
         drawn. (Optional, can be reassigned at any time.)
-    :parameter terminal: An instnace of a :class:`Terminal` object to use
+    :parameter terminal: An instance of a :class:`Terminal` object to use
         for communication with your TTY. (Optional, we will grab a default
         and can be reassigned so long as we're not currently running.)
     :parameter loop: The asyncio event loop to use for the main :meth:`run`
