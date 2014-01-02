@@ -204,14 +204,15 @@ class StringComponentSpec:
 
     def __add__(self, other):
         other = self._sanitise_other(other)
-        return StringWithFormatting((self, other))
+        result = StringWithFormatting((self, other))
+        return result
 
     def __radd__(self, other):
         other = self._sanitise_other(other)
         return StringWithFormatting((other, self))
 
     def chunk(self, regex):
-        if isinstance(self.content, StringComponentSpec):
+        if hasattr(self.content, 'chunk'):
             chunks = self.content.chunk(regex)
         else:
             chunks = regex.split(self.content)
@@ -221,9 +222,7 @@ class StringComponentSpec:
     def populate(self, terminal, styles, esc_seq_stack):
         esc_seq = self.placeholder.populate(terminal, styles)
         esc_seq_stack.push(esc_seq)
-        # FIXME: should this duck-type on populate? Currently, what if we put a
-        # StringWithFormatting as content?!
-        if isinstance(self.content, StringComponentSpec):
+        if hasattr(self.content, 'populate'):
             content = self.content.populate(
                 terminal, styles, esc_seq_stack)
         else:
@@ -341,7 +340,7 @@ class StringWithFormatting:
         '''
         spec1 = content1[-1] if content1 else None
         spec2 = content2[0] if content2 else None
-        if spec1 and type(spec1) is type(spec2):
+        if spec1 and spec2 and spec1.placeholder == spec2.placeholder:
             spec1.content = spec1.content + spec2.content
             content2 = content2[1:]
         return content1 + content2

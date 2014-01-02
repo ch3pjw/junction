@@ -21,6 +21,6 @@ from jcn import Root, Text
 text = Text(
     Root.format.bold('The ') + 'quick ' +
     Root.format.red('brown') + ' fox ' + Root.format.underline('jumps') +
-    ' over the lazy dog')
+    Root.format.reverse(Root.format.green(' over ') + 'the lazy dog'))
 root = Root(text)
 root.run()

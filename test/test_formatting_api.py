@@ -134,6 +134,7 @@ class TestStringWithFormatting(TestCase):
         self.format = FormatPlaceholderFactory()
         self.style = StylePlaceholderFactory()
         self.swf = 'Hello ' + self.format.blue(self.format.underline('World!'))
+        self.terminal = Terminal(force_styling=True)
 
     def test_init(self):
         swf = StringWithFormatting('Hello')
@@ -145,6 +146,10 @@ class TestStringWithFormatting(TestCase):
         swf = StringWithFormatting((NullComponentSpec('Bob'),))
         self.assertEqual(swf._content, (NullComponentSpec('Bob'),))
         content = (NullComponentSpec('one'), StringComponentSpec(None, 'two'))
+        swf = StringWithFormatting(content)
+        self.assertEqual(swf._content, (NullComponentSpec('onetwo'),))
+        content = (
+            NullComponentSpec('one'), StringComponentSpec('foo', 'two'))
         swf = StringWithFormatting(content)
         self.assertEqual(swf._content, content)
         swf = StringWithFormatting(
@@ -193,24 +198,36 @@ class TestStringWithFormatting(TestCase):
             StringWithFormatting('tea')]
         self.assertEqual(swf.splitlines(), expected)
 
-    def test_end_to_end(self):
-        terminal = Terminal(force_styling=True)
-        terminal.stream = StringIO()
-        text = Text(self.swf)
-        text.draw(6, 2, terminal=terminal)
-        result = terminal.stream.getvalue()
+    def test_nested_formats(self):
+        swf = self.format.bold('hello ') + self.format.reverse(
+            self.format.green('wor') + 'ld')
         expected = (
-            terminal.normal + terminal.move(0, 0) + 'Hello ' +
-            terminal.move(1, 0) + terminal.blue + terminal.underline +
-            'World!' + terminal.normal + terminal.blue + terminal.normal)
+            self.terminal.bold + 'hello ' + self.terminal.normal +
+            self.terminal.reverse + self.terminal.green + 'wor' +
+            self.terminal.normal + self.terminal.reverse + 'ld' +
+            self.terminal.normal)
+        esc_seq_stack = EscapeSequenceStack(self.terminal.normal)
+        result = swf.populate(self.terminal, self.style, esc_seq_stack)
         self.assertEqual(repr(result), repr(expected))
-        terminal.stream = StringIO()
-        text.content = 'Plainly formatted info'
-        text.update(terminal=terminal)
-        result = terminal.stream.getvalue()
+
+    def test_end_to_end(self):
+        self.terminal.stream = StringIO()
+        text = Text(self.swf)
+        text.draw(6, 2, terminal=self.terminal)
+        result = self.terminal.stream.getvalue()
         expected = (
-            terminal.normal + terminal.move(0, 0) + 'Plainl' +
-            terminal.move(1, 0) + 'y form')
+            self.terminal.normal + self.terminal.move(0, 0) + 'Hello ' +
+            self.terminal.move(1, 0) + self.terminal.blue +
+            self.terminal.underline + 'World!' + self.terminal.normal +
+            self.terminal.blue + self.terminal.normal)
+        self.assertEqual(repr(result), repr(expected))
+        self.terminal.stream = StringIO()
+        text.content = 'Plainly formatted info'
+        text.update(terminal=self.terminal)
+        result = self.terminal.stream.getvalue()
+        expected = (
+            self.terminal.normal + self.terminal.move(0, 0) + 'Plainl' +
+            self.terminal.move(1, 0) + 'y form')
         self.assertEqual(repr(result), repr(expected))
 
 
