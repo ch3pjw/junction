@@ -15,31 +15,67 @@
 
 from functools import wraps
 
+from .util import InheritDocstrings
+
 
 class EscapeSequenceStack:
+    '''An :class:`EscapeSequenceStack` is used to keep track of what formatting
+    escape sequences have been applied by a :class:`StringWithFormatting`
+    during the drawing process, so that we can step back and 'undo' the last
+    one when we need to go back to a previous set of formatting options.
+    '''
     def __init__(self, default_escape_sequence):
+        '''
+        :parameter str default_escape_sequence: The escape sequence used by
+            this stack as the 'reset' command for the terminal. (Will almost
+            certainly be :attr:`jcn.Terminal.normal`.)
+        '''
         self.default_escape_sequence = default_escape_sequence
         self._stack = []
 
     def push(self, esc_seq):
+        '''Push a new escapse sequence onto the stack.
+
+        :parameter str esc_seq: The terminal escape sequence to push onto the
+            stack.
+        '''
         self._stack.append(esc_seq)
 
     def pop(self):
         '''Pops the last escape sequence from the stack *and returns a string
         containing all the remaining escape sequences that should be in effect
         on the terminal*.
+
+        .. note::
+            This method may be named poorly, suggestions for improving it would
+            be welcome.
+
+        :returns str: Returns a string of the escape sequences remaining in the
+            stack, so as effectively to 'undo' the one that has just been
+            popped off.
         '''
         self._stack.pop()
         return self.default_escape_sequence + ''.join(self._stack)
 
 
-class Placeholder:
-    '''Placeholders represent objects that will at some point be transformed
-    into terminal escape sequences.
+class Placeholder(metaclass=InheritDocstrings):
+    '''Placeholders are objects that will provide concrete terminal escape
+    sequences dynamically. At creation time they are merely
+    given a name as a reference to use at draw-time, when their
+    :meth:`Placeholder.populate` method will be called with current
+    escape-sequence-providing objects. These objects are also provided by the
+    :attr:`Root.format` and :attr:`Root.style` factories as the entry point to
+    their formatting and style definition.
     '''
     __slots__ = ['attr_name']
 
     def __init__(self, attr_name):
+        '''
+        :parameter str attr_name: The name of the attribute/entry this object
+            references. This will only be resolved at draw time, so, in the
+            case of styles, the style need not yet be defined to be referenced
+            by a :class:`Placeholder`.
+        '''
         self.attr_name = attr_name
 
     def __repr__(self):
@@ -62,18 +98,45 @@ class Placeholder:
                     type(other), self))
 
     def __call__(self, content):
+        '''Designate the given content to be formatted according to the
+        formatting referenced by this :class:`Placeholder`.
+
+        :parameter content: The content the Junction is to format with this
+            object's formatting.
+        :type content: :class:`str`, :class:`StringComponentSpec` or
+            :class:`StringWithFormatting`
+        :returns: A :class:`StringComponentSpec` object referencing both the
+            given content and this :class:`Placeholder` instance.
+        '''
         return StringComponentSpec(self, content)
 
     def populate(self, terminal, styles):
+        '''
+        :parameter Terminal terminal: A :class:`jcn.Terminal` object from which
+            to retrieve format escape sequences by attribute lookup.
+        :parameter StylePlacholderFactory styles: A
+            :class:`StylePlaceholderFactory` object from which to look up
+            other :class:`Placeholder` objects by name. These referenced
+            :class:`Placeholder` objects represent a semantically meaningful
+            set of formatting and can be recursively resolved to concrete
+            escape sequences.
+        '''
         raise NotImplementedError()
 
 
 class FormatPlaceholder(Placeholder):
+    '''A :class:`FormatPlaceholder` references :class:`jcn.Terminal` escape
+    sequence attributes such as 'red', 'bold' or 'underline'.
+    '''
     def populate(self, terminal, styles):
         return getattr(terminal, self.attr_name)
 
 
 class ParameterizingFormatPlaceholder(FormatPlaceholder):
+    '''A :class:`ParameterizingFormatPlaceholder` object references
+    :class:`jcn.Terminal` escape sequence attributes that are callable and take
+    parameters, such as 'color'.
+    '''
     __slots__ = Placeholder.__slots__ + ['args']
 
     def __init__(self, attr_name):
@@ -139,6 +202,7 @@ class PlaceholderGroup:
             string = placeholder.populate(terminal, styles)
             escape_sequence += string
         return escape_sequence
+    populate.__doc__ = Placeholder.populate.__doc__
 
 
 class FormatPlaceholderFactory:
