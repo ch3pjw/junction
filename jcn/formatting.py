@@ -160,6 +160,8 @@ class ParameterizingFormatPlaceholder(FormatPlaceholder):
         return super().__add__(other)
 
     def __call__(self, *args):
+        '''FIXME:
+        '''
         if not self.args:
             self.args = args
             return self
@@ -172,12 +174,17 @@ class ParameterizingFormatPlaceholder(FormatPlaceholder):
 
 
 class StylePlaceholder(Placeholder):
+    '''FIXME:
+    '''
     def populate(self, terminal, styles):
         style = styles[self.attr_name]
         return style.populate(terminal, styles)
 
 
 class PlaceholderGroup:
+    '''FIXME:
+    Note why we don't have a __call__ method
+    '''
     def __init__(self, placeholders=None):
         if isinstance(placeholders, self.__class__):
             placeholders = placeholders.placeholders
@@ -211,6 +218,8 @@ class FormatPlaceholderFactory:
     __slots__ = []  # Ensure noone can store arbitrary attributes on us
 
     def __getattr__(self, attr_name):
+        '''FIXME:
+        '''
         if attr_name == '__isabstractmethod__':
             return False
         else:
@@ -221,24 +230,32 @@ class FormatPlaceholderFactory:
 
 
 class StylePlaceholderFactory:
+    '''FIXME: document this
+    '''
     __slots__ = ['_defined_styles']
 
     def __init__(self):
         super().__setattr__('_defined_styles', {})
 
     def __getattr__(self, name):
+        '''FIXME:
+        '''
         if name == '__isabstractmethod__':
             return False
         else:
             return StylePlaceholder(name)
 
     def __setattr__(self, name, value):
+        '''FIXME:
+        '''
         if value is None:
             del self._defined_styles[name]
         else:
             self._defined_styles[name] = value
 
     def __getitem__(self, name):
+        '''FIXME:
+        '''
         return self._defined_styles[name]
 
 
@@ -250,6 +267,8 @@ class StringComponentSpec:
     __slots__ = ['placeholder', 'content']
 
     def __init__(self, placeholder, content):
+        '''FIXME:
+        '''
         self.placeholder = placeholder
         self.content = content
 
@@ -261,6 +280,8 @@ class StringComponentSpec:
         return str(self.content)
 
     def __getattr__(self, attr_name):
+        '''FIXME:
+        '''
         str_method = getattr(self.content, attr_name)
         @wraps(str_method)
         def do_str_method(*args, **kwargs):
@@ -291,6 +312,8 @@ class StringComponentSpec:
         return iter(self.content)
 
     def __getitem__(self, index):
+        '''FIXME:
+        '''
         return self.__class__(self.placeholder, self.content[index])
 
     def _sanitise_other(self, other):
@@ -312,6 +335,8 @@ class StringComponentSpec:
         return StringWithFormatting((other, self))
 
     def chunk(self, regex):
+        '''FIXME:
+        '''
         if hasattr(self.content, 'chunk'):
             chunks = self.content.chunk(regex)
         else:
@@ -320,6 +345,8 @@ class StringComponentSpec:
         return chunks
 
     def populate(self, terminal, styles, esc_seq_stack):
+        '''FIXME:
+        '''
         esc_seq = self.placeholder.populate(terminal, styles)
         esc_seq_stack.push(esc_seq)
         if hasattr(self.content, 'populate'):
@@ -331,6 +358,8 @@ class StringComponentSpec:
 
 
 class NullComponentSpec(StringComponentSpec):
+    '''FIXME:
+    '''
     def __init__(self, *args):
         if len(args) == 1:
             super().__init__(placeholder=None, content=args[0])
@@ -346,9 +375,13 @@ class NullComponentSpec(StringComponentSpec):
 
 
 class StringWithFormatting:
+    '''FIXME:
+    '''
     __slots__ = ['_content']
 
     def __init__(self, content):
+        '''FIXME:
+        '''
         if isinstance(content, self.__class__):
             self._content = content._content
         elif isinstance(content, StringComponentSpec):
@@ -495,10 +528,14 @@ class StringWithFormatting:
         return result
 
     def chunk(self, regex):
+        '''FIXME:
+        '''
         reference = regex.split(str(self))
         return self._apply_str_method('chunk', regex, reference=reference)
 
     def strip(self):
+        '''FIXME:
+        '''
         if len(self._content) == 0:
             return self
         elif len(self._content) == 1:
@@ -510,6 +547,8 @@ class StringWithFormatting:
             return self.__class__(total)
 
     def populate(self, terminal, styles=None, esc_seq_stack=None):
+        '''FIXME:
+        '''
         # FIXME: esc_seq_stack should probably be mandatory
         return ''.join(
             s.populate(terminal, styles, esc_seq_stack) for s in self._content)
