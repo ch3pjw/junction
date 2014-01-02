@@ -17,7 +17,7 @@ from abc import abstractmethod
 
 from .base import ABCUIElement, Block
 from .util import clamp, crop_or_expand
-from .formatting import wrap
+from .textwrap import wrap
 
 
 class ABCDisplayElement(ABCUIElement):

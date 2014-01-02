@@ -19,8 +19,7 @@ from io import StringIO
 from jcn.formatting import (
     EscapeSequenceStack, StringComponentSpec, NullComponentSpec,
     FormatPlaceholder, ParamaterizingFormatPlaceholder, StylePlaceholder,
-    FormatPlaceholderFactory, StylePlaceholderFactory, StringWithFormatting,
-    wrap)
+    FormatPlaceholderFactory, StylePlaceholderFactory, StringWithFormatting)
 from jcn import Terminal, Text, Fill
 
 
@@ -258,33 +257,3 @@ class TestDefaultFormatting(TestCase):
             self.terminal.move(0, 0) + self.terminal.underline + 'content' +
             self.terminal.normal + self.terminal.blue + self.terminal.normal)
         self.assertEqual(repr(result), repr(expected))
-
-
-class TestTextWrapper(TestCase):
-    def setUp(self):
-        self.format = FormatPlaceholderFactory()
-
-    def test_wrap_str(self):
-        text = 'The  quick brown fox jumps over the lazy dog'
-        result = wrap(text, width=15)
-        expected = [
-            'The  quick',
-            'brown fox jumps',
-            'over the lazy',
-            'dog']
-        self.assertEqual(result, expected)
-        self.assertEqual(wrap('', 10), [])
-
-    def test_wrap_str_with_formatting(self):
-        long_swf = (
-            '  This  is a    rather ' + self.format.bold('loooong ') +
-            'string th' + self.format.green('at needs wrapppppp') + 'ing ')
-        result = wrap(long_swf, width=11)
-        expected = [
-            StringWithFormatting('This  is a'),
-            StringWithFormatting('rather'),
-            StringWithFormatting(self.format.bold('loooong')),
-            'string th' + self.format.green('at'),
-            StringWithFormatting(self.format.green('needs wrapp')),
-            self.format.green('pppp') + 'ing']
-        self.assertEqual(result, expected)
