@@ -73,7 +73,7 @@ class FormatPlaceholder(Placeholder):
         return getattr(terminal, self.attr_name)
 
 
-class ParamaterizingFormatPlaceholder(FormatPlaceholder):
+class ParameterizingFormatPlaceholder(FormatPlaceholder):
     __slots__ = Placeholder.__slots__ + ['args']
 
     def __init__(self, attr_name):
@@ -151,7 +151,7 @@ class FormatPlaceholderFactory:
             return False
         else:
             if attr_name in ('color', 'on_color'):
-                return ParamaterizingFormatPlaceholder(attr_name)
+                return ParameterizingFormatPlaceholder(attr_name)
             else:
                 return FormatPlaceholder(attr_name)
 

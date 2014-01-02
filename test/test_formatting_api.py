@@ -18,7 +18,7 @@ from io import StringIO
 
 from jcn.formatting import (
     EscapeSequenceStack, StringComponentSpec, NullComponentSpec,
-    FormatPlaceholder, ParamaterizingFormatPlaceholder, StylePlaceholder,
+    FormatPlaceholder, ParameterizingFormatPlaceholder, StylePlaceholder,
     FormatPlaceholderFactory, StylePlaceholderFactory, StringWithFormatting)
 from jcn import Terminal, Text, Fill
 
@@ -62,7 +62,7 @@ class TestParameterizingFormatPlaceholder(TestCase):
         with self.assertRaises(ValueError):
             param_fmt_placeholder.populate(self.terminal, {})
         result = param_fmt_placeholder(121)
-        self.assertIsInstance(result, ParamaterizingFormatPlaceholder)
+        self.assertIsInstance(result, ParameterizingFormatPlaceholder)
         result = param_fmt_placeholder.populate(self.terminal, {})
         self.assertEqual(repr(result), repr(self.terminal.color(121)))
         spec = param_fmt_placeholder('important info')
