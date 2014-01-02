@@ -164,7 +164,7 @@ class Terminal(blessings.Terminal):
         This context manager achieves that by setting 'cbreak' mode on the
         the output tty stream. cbreak is a mode inbetween 'cooked mode', where
         all the user's input is preprocessed, and 'raw mode' where none of it
-        is. Basically, in cbreak mode input like ``ctrl+c`` will still
+        is. Basically, in cbreak mode input like :kbd:`Control-c` will still
         interrupt (i.e. 'break') the process, hence the name. Wikipedia is your
         friend on this one!
 

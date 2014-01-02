@@ -114,7 +114,7 @@ class Root(ABCUIElement):
         Specifically, :mod:`jcn` applications run the terminal full-screen and
         with the cursor hidden, and set :attr:`sys.stdin` to unbuffered and
         non-blocking so that we can respond immediately to any keystrokes from
-        the user. We also correctly handle being suspended (``ctrl+z``,
+        the user. We also correctly handle being suspended (:kbd:`Control-z`,
         SIGTSTP) and resumed, and the terminal window being resized.
 
         We run :mod:`asyncio` event loop inside context managers that will
