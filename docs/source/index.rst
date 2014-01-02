@@ -12,14 +12,9 @@ breeze.
 
    api
    formatting
+   full_class_docs/index
 .. Will want something like: UI elements, with sub categories for display and
    container elements...
-.. Will also want a full-blown 'here are all the classes' document
-
-
-Indices and tables
-^^^^^^^^^^^^^^^^^^
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
