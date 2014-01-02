@@ -100,3 +100,15 @@ class LoopingCall:
 
     def stop(self):
         self.running = False
+
+
+class InheritDocstrings(type):
+    def __new__(cls, cls_name, bases, classdict):
+        for attr_name, attr in classdict.items():
+            if getattr(attr, '__doc__') is None:
+                # See if this attribute came from any of our ancestors
+                for base in bases:
+                    if attr_name in base.__dict__:
+                        attr.__doc__ = base.__dict__[attr_name].__doc__
+                        break
+        return super().__new__(cls, cls_name, bases, classdict)

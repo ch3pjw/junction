@@ -17,7 +17,8 @@ import asyncio
 from unittest import TestCase
 
 from jcn.util import (
-    clamp, weighted_round_robin, crop_or_expand, LoopingCall)
+    clamp, weighted_round_robin, crop_or_expand, LoopingCall,
+    InheritDocstrings)
 
 
 class TestUtil(TestCase):
@@ -107,3 +108,30 @@ class TestUtil(TestCase):
         looping_call.start(0.01, loop=loop)
         loop.run_until_complete(future)
         self.assertEqual(result, [0, 1, 2, 3])
+
+    def test_inherit_docstrings(self):
+        class A(metaclass=InheritDocstrings):
+            def foo(self):
+                'foo docstring'
+
+            def bar(self):
+                pass
+
+        class B(A):
+            def foo(self):
+                pass
+
+            def bar(self):
+                'bar docstring'
+
+        self.assertEqual(B.foo.__doc__, 'foo docstring')
+        self.assertEqual(B().foo.__doc__, 'foo docstring')
+        self.assertEqual(B.bar.__doc__, 'bar docstring')
+        self.assertEqual(B().bar.__doc__, 'bar docstring')
+
+        class C(A):
+            def foo(self):
+                'new foo docstring'
+
+        self.assertEqual(C.foo.__doc__, 'new foo docstring')
+        self.assertEqual(C().foo.__doc__, 'new foo docstring')
