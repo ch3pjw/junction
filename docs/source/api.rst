@@ -8,6 +8,6 @@ Junction's API
     :members:
 
 .. autoclass:: Terminal
-    :members:
+    :members: draw_lines, nonblocking_input, unbuffered_input
 
 .. autofunction:: get_terminal

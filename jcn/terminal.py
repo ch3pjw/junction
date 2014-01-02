@@ -39,10 +39,43 @@ def _override_sugar(func):
 
 
 class Terminal(blessings.Terminal):
-    '''FIXME: Reference :mod:`blessings` and it's :class:`blessings.Terminal`
-    Explain the role of the :class:`Terminal` and our additions.
+    '''Junction is loosely based on the :mod:`blessings` module, which provides
+    easy, Pythonic access to escape squences for terminal colouring, styling
+    and positioning. Central to :mod:`blessings` is its
+    :class:`blessings.Terminal` class, which is the hook for :mod:`blessings`'
+    users to request escape sequences. Junction's :class:`Terminal` class
+    extends :class:`blessings.Terminal` to add some features requisite for
+    handling some more 'application level' situations.
+
+    * Firstly, :class:`jcn.Terminal` overrides some of :mod:`blessings` normal
+      methods to track some state of the terminal it is representing. This is
+      important for handling suspension of the application via SIGTSTP
+      correctly.  (In that case we need to restore the terminal's original
+      behaviours when we are suspended and restore the application's desired
+      behaviours when resumed.)
+
+    * Secondly, we provide some methods to change the behaviour of
+      :attr:`sys.stdin`, which :mod:`blessings` never needed to address, so
+      that Junction applications can gain access to and handle user keystrokes
+      responsively.
+
+    * Finally, because Junction is all about drawing blocks of UI to the
+      screen, rather than whole lines, we provide a simple inferface for doing
+      that.
+
+    You could create :class:`Terminal` instance manually, and use it
+    independently or pass it to your applications :class:`Root` instance if you
+    want to override some default behaviours, but in the *vast majority* of
+    cases you just need to know that this is where :mod:`jcn`'s link to
+    :mod:`blessings` lies, and the things this class takes care of so that you
+    don't have to worry about them. To gain access to terminal formatting in
+    your application, you instead use :attr:`Root.format`.
     '''
     def __init__(self, *args, infile=None, handle_signals=True, **kwargs):
+        '''
+        :parameter infile:
+        :paremeter handle_signals:
+        '''
         super().__init__(*args, **kwargs)
         self.infile = infile or sys.stdin
         if handle_signals:
@@ -121,12 +154,22 @@ class Terminal(blessings.Terminal):
 
     @contextmanager
     def unbuffered_input(self):
-        '''Sets cbreak on the current tty so that input from the user isn't
-        parcelled up and delivered with each press of return, but delivered on
-        each keystroke.
+        '''Context manager for setting the terminal to use unbuffered input.
 
-        FIXME: expand so as to clarify the level at which users need to care
-        about this!
+        Normally, your terminal will collect together a user's input
+        keystrokes and deliver them to you in one neat parcel when they hit
+        the return/enter key. In a real-time interactive application we instead
+        want to receive each keystroke as it happens.
+
+        This context manager achieves that by setting 'cbreak' mode on the
+        the output tty stream. cbreak is a mode inbetween 'cooked mode', where
+        all the user's input is preprocessed, and 'raw mode' where none of it
+        is. Basically, in cbreak mode input like ``ctrl+c`` will still
+        interrupt (i.e. 'break') the process, hence the name. Wikipedia is your
+        friend on this one!
+
+        :meth:`Root.run` uses this context manager for you to make your
+        application work in the correct way.
         '''
         if self.is_a_tty:
             orig_tty_attrs = termios.tcgetattr(self.stream)
@@ -141,8 +184,19 @@ class Terminal(blessings.Terminal):
 
     @contextmanager
     def nonblocking_input(self):
-        '''FIXME: explain about this, even if we steer users away from it.
+        '''Context manager to set the :class:`Terminal`'s input file to read in
+        a non-blocking way.
+
+        Normally, reading from :attr:`sys.stdin` blocks, which is bad if we
+        want an interactive application that can also update information on the
+        screen without any input from the user! Therefore, we need to make
+        :meth:`Terminal.infile.read` a non-blocking operation, which just
+        returns nothing if we have no input.
+
+        :meth:`Root.run` uses this context manager for you to make your
+        application work in the correct way.
         '''
+        # FIXME: do we handle restoring this during SIGTSTP?
         if hasattr(self.infile, 'fileno'):
             # Use fcntl to set stdin to non-blocking. WARNING - this is not
             # particularly portable!
@@ -156,7 +210,19 @@ class Terminal(blessings.Terminal):
             yield
 
     def draw_lines(self, lines, x=0, y=0):
-        '''FIXME:
+        '''Write a collection of lines to the terminal stream at the given
+        location. The lines are written as one 'block' (i.e. each new line
+        starts one line down from the previous, but each starts *at the given x
+        coordinate*).
+
+        :parameter lines: An iterable of strings that should be written to the
+            terminal. They need not all be the same length, but should ideally
+            not extend beyond the right hand side of the terminal screen,
+            otherwise strange linebreaking/overwriting may occur.
+        :parameter x: the column of the terminal display at which the block of
+            lines begins.
+        :parameter y: the row of the terminal display at which the block of
+            lines begins (from top).
         '''
         for y, line in enumerate(lines, start=y):
             self.stream.write(self.move(y, x))
