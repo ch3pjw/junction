@@ -85,7 +85,7 @@ class Root(ABCUIElement):
 
     @property
     def updated(self):
-        '''``True`` if this element, or any of its children, have been 
+        '''``True`` if this element, or any of its children, have been
         updated, otherwise ``False``.
         '''
         return self.element.updated or self._updated
