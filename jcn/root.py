@@ -85,7 +85,7 @@ class Root(ABCUIElement):
 
     @property
     def updated(self):
-        '''``True`` if this this element, or any of its children, have been
+        '''``True`` if this element, or any of its children, have been 
         updated, otherwise ``False``.
         '''
         return self.element.updated or self._updated
@@ -108,7 +108,7 @@ class Root(ABCUIElement):
     def run(self):
         '''The main entry point of a :mod:`jcn`-based application. :meth:`run`
         sets up the terminal and then runs then event loop, continually
-        repsponding to user input and drawing UI element to the screen when
+        responding to user input and drawing UI element to the screen when
         required.
 
         Specifically, :mod:`jcn` applications run the terminal full-screen and
