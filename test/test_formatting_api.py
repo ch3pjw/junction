@@ -41,6 +41,17 @@ class TestStringComponentSpec(TestCase):
         spec = StringComponentSpec('bold', '  Hello!  ')
         self.assertEqual(spec.strip(), StringComponentSpec('bold', 'Hello!'))
 
+    @patch('jcn.formatting.get_terminal')
+    def test_populate_no_args(self, mock_get_terminal):
+        terminal = Terminal(force_styling=True)
+        mock_get_terminal.return_value = terminal
+        format = FormatPlaceholderFactory()
+        spec = StringComponentSpec(format.green, 'slimey')
+        result = spec.populate()
+        expected = terminal.green + 'slimey' + terminal.normal
+        self.assertIsInstance(result, str)
+        self.assertEqual(repr(result), repr(expected))
+
 
 class TestParameterizingFormatPlaceholder(TestCase):
     def setUp(self):
@@ -223,6 +234,17 @@ class TestStringWithFormatting(TestCase):
         expected = (
             self.terminal.normal + self.terminal.move(0, 0) + 'Plainl' +
             self.terminal.move(1, 0) + 'y form')
+        self.assertEqual(repr(result), repr(expected))
+
+    @patch('jcn.formatting.get_terminal')
+    def test_populate_with_no_args(self, mock_get_terminal):
+        mock_get_terminal.return_value = self.terminal
+        result = self.swf.populate()
+        expected = (
+            'Hello ' + self.terminal.blue + self.terminal.underline +
+            'World!' + self.terminal.normal + self.terminal.blue +
+            self.terminal.normal)
+        self.assertIsInstance(result, str)
         self.assertEqual(repr(result), repr(expected))
 
 

@@ -15,6 +15,7 @@
 
 from functools import wraps
 
+from .terminal import get_terminal
 from .util import InheritDocstrings
 
 
@@ -344,9 +345,12 @@ class StringComponentSpec:
         chunks = [self.__class__(self.placeholder, c) for c in chunks if c]
         return chunks
 
-    def populate(self, terminal, styles, esc_seq_stack):
         '''FIXME:
+    def populate(self, terminal=None, styles=None, esc_seq_stack=None):
         '''
+        terminal = terminal or get_terminal()
+        styles = styles or {}
+        esc_seq_stack = esc_seq_stack or EscapeSequenceStack(terminal.normal)
         esc_seq = self.placeholder.populate(terminal, styles)
         esc_seq_stack.push(esc_seq)
         if hasattr(self.content, 'populate'):
@@ -546,9 +550,9 @@ class StringWithFormatting:
             total = (first,) + self._content[1:-1] + (last,)
             return self.__class__(total)
 
-    def populate(self, terminal, styles=None, esc_seq_stack=None):
-        '''FIXME:
-        '''
-        # FIXME: esc_seq_stack should probably be mandatory
+    def populate(self, terminal=None, styles=None, esc_seq_stack=None):
+        terminal = terminal or get_terminal()
+        styles = styles or {}
+        esc_seq_stack = esc_seq_stack or EscapeSequenceStack(terminal.normal)
         return ''.join(
             s.populate(terminal, styles, esc_seq_stack) for s in self._content)
