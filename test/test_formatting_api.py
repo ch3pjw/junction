@@ -15,6 +15,7 @@
 
 from unittest import TestCase
 from io import StringIO
+from mock import patch
 
 from jcn.formatting import (
     EscapeSequenceStack, StringComponentSpec, NullComponentSpec,
@@ -24,26 +25,21 @@ from jcn import Terminal, Text, Fill
 
 
 class TestStringComponentSpec(TestCase):
-    def setUp(self):
-        class TestClass(StringComponentSpec):
-            def _populate(self):
-                pass
-        self.test_cls = TestClass
-
     def test_len(self):
-        self.assertEqual(len(self.test_cls('blue', 'content')), 7)
+        self.assertEqual(len(StringComponentSpec('blue', 'content')), 7)
 
     def test_str(self):
-        self.assertEqual(str(self.test_cls('blue', 'content')), 'content')
+        self.assertEqual(
+            str(StringComponentSpec('blue', 'content')), 'content')
 
     def test_repr(self):
         self.assertEqual(
-            repr(self.test_cls('green', 'beret')),
-            "TestClass('green', 'beret')")
+            repr(StringComponentSpec('green', 'beret')),
+            "StringComponentSpec('green', 'beret')")
 
     def test_getattr(self):
-        spec = self.test_cls('bold', '  Hello!  ')
-        self.assertEqual(spec.strip(), self.test_cls('bold', 'Hello!'))
+        spec = StringComponentSpec('bold', '  Hello!  ')
+        self.assertEqual(spec.strip(), StringComponentSpec('bold', 'Hello!'))
 
 
 class TestParameterizingFormatPlaceholder(TestCase):
