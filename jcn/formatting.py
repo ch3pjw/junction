@@ -417,10 +417,7 @@ class StringWithFormatting:
         elif isinstance(content, str):
             self._content = (NullComponentSpec(content),)
         else:
-            self._content = tuple()
-            for string_spec in content:
-                self._content = self._join_content(
-                    self._content, (string_spec,))
+            self._content = tuple(content)
 
     def __repr__(self):
         return '{}([{}])'.format(
