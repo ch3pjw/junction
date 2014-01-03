@@ -345,8 +345,32 @@ class StringComponentSpec:
         chunks = [self.__class__(self.placeholder, c) for c in chunks if c]
         return chunks
 
-        '''FIXME:
     def populate(self, terminal=None, styles=None, esc_seq_stack=None):
+        '''Get the concrete (including terminal escape sequences)
+        representation of this string.
+
+        :parameter Terminal terminal: The terminal object to use for turning
+            formatting attributes such as :attr:`Root.format.blue` into
+            concrete escape sequences.
+        :parameter styles: An object from which to look up style definitions,
+            which ultimately resolve to escape sequences, but may resolve to
+            other intermediaries, including other styles.
+        :type styles: StylePlaceholderFactory or dict
+        :parameter EscapeSequenceStack esc_seq_stack: An
+            :class:`EscapeSequenceStack` for tracking which styles have been
+            applied to the given terminal, so that during the drawing process
+            we can 'undo' the last format that we applied to the terminal.
+        :returns str: Returns a concrete string, containing all the escape
+            sequences required to render the string to the terminal with the
+            desired formatting.
+
+        .. note::
+            All parameters are optional, and will be populated with sensible
+            defaults if ommitted. This is to assist testing and experimentation
+            with lower-level parts of Junction. If you want to use a
+            :class:`StringWithFormatting` object as part of a wider
+            application, it is suggested that you always pass all the arguments
+            explicitly.
         '''
         terminal = terminal or get_terminal()
         styles = styles or {}
@@ -556,3 +580,4 @@ class StringWithFormatting:
         esc_seq_stack = esc_seq_stack or EscapeSequenceStack(terminal.normal)
         return ''.join(
             s.populate(terminal, styles, esc_seq_stack) for s in self._content)
+    populate.__doc__ = StringComponentSpec.populate.__doc__
