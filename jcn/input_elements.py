@@ -93,7 +93,7 @@ class LineBuffer:
 
 
 class Input(Text):
-    # I'm not sure I'm liking the contstraints that the interrelationship of
+    # I'm not sure I'm liking the constraints that the interrelationship of
     # Text and Input imposes...
     def __init__(self, placeholder_text, *args, **kwargs):
         super().__init__(content=LineBuffer(), *args, **kwargs)
