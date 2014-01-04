@@ -414,25 +414,33 @@ class StringWithFormatting:
 
     def __init__(self, content):
         '''FIXME:
+        :attr:`_content` is a tuple of (:class:`Placholder`, strings)
         '''
         if isinstance(content, self.__class__):
             self._content = content._content
-        elif isinstance(content, StringComponentSpec):
-            self._content = (content,)
         elif isinstance(content, str):
-            self._content = (NullComponentSpec(content),)
+            self._content = (None, (content,))
         else:
-            self._content = tuple(content)
+            self._content = content
+        self._str = None
 
     def __repr__(self):
-        return '{}([{}])'.format(
-            self.__class__.__name__, ', '.join(repr(s) for s in self._content))
+        return '{}({!r})'.format(
+            self.__class__.__name__, self._content)
 
     def __str__(self):
-        return ''.join(map(str, self._content))
+        return ''.join(map(lambda s: ''.join(s[1]), self._content))
 
     def __len__(self):
-        return len(str(self))
+        return sum(self._get_len_of_section(section) for section self._content)
+
+    def _get_len_of_section(self, section):
+        '''
+        :returns int: The length of the given section of the string (a bunch of
+            strings which all have the same formatting applied)
+        '''
+        _placholder, strings = section
+        return sum(len(string) for string in strings)
 
     def __bool__(self):
         # We're not False, even if we only have content that isn't printable
@@ -449,62 +457,48 @@ class StringWithFormatting:
 
     def _get_new_content(self, other):
         if isinstance(other, str):
-            new_content = (NullComponentSpec(other),)
-        elif isinstance(other, StringComponentSpec):
-            new_content = (other,)
-        elif isinstance(other, StringWithFormatting):
-            new_content = other._content
+            return (None, (other,))
+        elif hasattr(other, '_content'):
+            return other._content
         else:
-            raise TypeError('FIXME: nicer message!')
-        return new_content
-
-    def _join_content(self, content1, content2):
-        '''Takes the contents of two StringWithFormatting objects and joins
-        them together for making a new one, but taking care of the fact that if
-        we have two string_spec objects of the same type at the join, we should
-        glue them together.
-        '''
-        spec1 = content1[-1] if content1 else None
-        spec2 = content2[0] if content2 else None
-        if spec1 and spec2 and spec1.placeholder == spec2.placeholder:
-            spec1.content = spec1.content + spec2.content
-            content2 = content2[1:]
-        return content1 + content2
+            raise TypeError('FIXME: message')
 
     def __add__(self, other):
         new_content = self._get_new_content(other)
-        content = self._join_content(self._content, new_content)
-        return self.__class__(content)
+        return self.__class__(self._content + new_content)
 
     def __radd__(self, other):
         new_content = self._get_new_content(other)
-        content = self._join_content(new_content, self._content)
-        return self.__class__(content)
+        return self.__class__(new_content + self._content)
 
     def __iter__(self):
-        for string in self._content:
-            for char in string:
-                yield char
+        for placeholder, strings in self._content:
+            for string in string:
+                for char in string:
+                    yield char
 
     def _get_slice(self, start, stop):
         slice_start = start if start is not None else 0
         slice_stop = stop if stop is not None else len(self)
         slice_stop = min(slice_stop, len(self))
         result = []
-        spec_start = 0
-        for string_spec in self._content:
-            spec_stop = spec_start + len(string_spec)
-            if spec_start >= slice_start and spec_stop <= slice_stop:
-                result.append(string_spec)
-            elif spec_start < slice_start < spec_stop:
-                result.append(string_spec[
-                    slice_start - spec_start:slice_stop - spec_start])
-            elif spec_start < slice_stop <= spec_stop:
-                result.append(string_spec[:slice_stop - spec_start])
-            if spec_stop >= slice_stop:
+        sec_start = 0
+        for placeholder, strings in self._content:
+            new_strings = []
+            for string in strings:
+                str_stop = str_start + len(string)
+                if str_start >= slice_start and str_stop <= slice_stop:
+                    section.append(section)
+                elif str_start < slice_start < str_stop:
+                    section.append(string[
+                        slice_start - str_start:slice_stop - str_start])
+                elif str_start < slice_stop <= str_stop:
+                    section.append(string[:slice_stop - str_start])
+                str_start = str_stop
+            result.append(placeholder, tuple(new_strings))
+            if str_stop >= slice_stop:
                 break
-            spec_start = spec_stop
-        return self.__class__(result)
+        return self.__class__(tuple(result))
 
     def __getitem__(self, index):
         if isinstance(index, slice):
