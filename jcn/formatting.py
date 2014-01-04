@@ -265,20 +265,25 @@ class StringComponentSpec:
     part of a string-like object that contains formatting information as well
     as printable characters.
     '''
-    __slots__ = ['placeholder', 'content']
+    __slots__ = ['placeholder', 'content', '_str']
 
     def __init__(self, placeholder, content):
         '''FIXME:
         '''
         self.placeholder = placeholder
         self.content = content
+        self._str = None
 
     def __repr__(self):
         return '{}({!r}, {!r})'.format(
             self.__class__.__name__, self.placeholder, self.content)
 
     def __str__(self):
-        return str(self.content)
+        if self._str is None:
+            # We're supposed to be immutable, and calculating our str is
+            # potentially quite expensive, so cache the result:
+            self._str = str(self.content)
+        return self._str
 
     def __getattr__(self, attr_name):
         '''FIXME:
