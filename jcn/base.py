@@ -165,7 +165,7 @@ class ABCUIElement(metaclass=ABCMeta):
         dictionary.
         '''
         for i, line in enumerate(block):
-            if isinstance(line, StringWithFormatting):
+            if hasattr(line, 'populate'):
                 line = line.populate(terminal, styles, esc_seq_stack)
             yield line
 
