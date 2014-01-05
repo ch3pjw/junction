@@ -13,9 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
 
-from abc import abstractmethod
+from abc import abstractmethod, abstractproperty
 
 from .base import ABCUIElement, Block
+from .util import weighted_round_robin
 
 
 class ABCContainerElement(ABCUIElement):
@@ -219,3 +220,108 @@ class Zebra(Stack):
                 else:
                     default_format = zebra_format
             yield element, width, height, x, y, default_format
+
+
+class SplitContainerItemInfo:
+    def __init__(self, element, weight, size):
+        self.element = element
+        self.weight = weight
+        self.size = size
+        # FIXME: This is a bit of a nasty hack to help the container:
+        self._round_robin_additions_to_ignore = size
+
+
+class SplitContainer(ABCContainerElement):
+    _dimension = abstractproperty()
+
+    def __init__(self, *elements, **kwargs):
+        self._weights = []
+        super().__init__(*elements, **kwargs)
+
+    def add_element(self, element, weight=1):
+        self._weights.append(weight)
+        super().add_element(element)
+
+    def remove_element(self, element):
+        index = self._content.index(element)
+        del self._weights[index]
+        super().remove_element(element)
+
+    def get_min_size(self, dimension):
+        mins = [
+            e.get_min_size(dimension) for e in self if
+            e.get_min_size(dimension) is not None]
+        if dimension == self._dimension:
+            return sum(mins)
+        else:
+            return max(mins)
+
+    @property
+    def min_width(self):
+        return self.get_min_size('width')
+
+    @property
+    def min_height(self):
+        return self.get_min_size('height')
+
+    def get_max_size(self, dimension):
+        maxs = [e.get_max_size(dimension) for e in self]
+        if None in maxs:
+            return
+        if dimension == self._dimension:
+            return sum(maxs)
+        else:
+            return max(maxs)
+
+    @property
+    def max_width(self):
+        return self.get_max_size('width')
+
+    @property
+    def max_height(self):
+        return self.get_max_size('height')
+
+    def _calculate_element_sizes(self, size):
+        allocated_size = 0
+        item_infos = []
+        weighted_items = []
+        for element, weight in zip(self, self._weights):
+            min_size = element.get_min_size(self._dimension) or 0
+            item = SplitContainerItemInfo(element, weight, min_size)
+            allocated_size += min_size
+            item_infos.append(item)
+            weighted_items.append((item, weight))
+        for item in weighted_round_robin(weighted_items):
+            if allocated_size >= size:
+                break
+            size_constraint = item.element.get_max_size(self._dimension)
+            if size_constraint is None or item.size < size_constraint:
+                if item._round_robin_additions_to_ignore:
+                    item._round_robin_additions_to_ignore -= 1
+                else:
+                    item.size += 1
+                    allocated_size += 1
+        return [(item.element, item.size) for item in item_infos]
+
+    def _get_elements_and_parameters(
+            self, width, height, x, y, default_format):
+        size = height if self._dimension == 'height' else width
+        processed_size = 0
+        for element, size in self._calculate_element_sizes(size):
+            if self._dimension == 'height':
+                yield (
+                    element, width, size, x, y + processed_size,
+                    default_format)
+            else:
+                yield (
+                    element, size, height, x + processed_size, y,
+                    default_format)
+            processed_size += size
+
+
+class HorizontalSplitContainer(SplitContainer):
+    _dimension = 'height'
+
+
+class VerticalSplitContainer(SplitContainer):
+    _dimension = 'width'
