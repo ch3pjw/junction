@@ -248,27 +248,22 @@ class SplitContainer(ABCContainerElement):
         super().remove_element(element)
 
     def get_min_size(self, dimension):
+        mins = [
+            e.get_min_size(dimension) for e in self if
+            e.get_min_size(dimension) is not None]
         if dimension == self._dimension:
-            return (
-                sum(
-                    e.get_min_size(dimension) for e in self if
-                    e.get_min_size(dimension) is not None) +
-                len(self._contents) - 1)
+            return sum(mins)
         else:
-            raise NotImplementedError("Need to work out what to return here")
+            return max(mins)
 
     def get_max_size(self, dimension):
+        maxs = [e.get_max_size(dimension) for e in self]
+        if None in maxs:
+            return
         if dimension == self._dimension:
-            if any(e.get_max_size(dimension) is None for e in self):
-                return
-            else:
-                return (
-                    sum(
-                        e.get_max_size(dimension) for e in self if
-                        e.get_max_size(dimension) is not None) +
-                    len(self._contents) - 1)
+            return sum(maxs)
         else:
-            raise NotImplementedError("Need to work out what to return here")
+            return max(maxs)
 
     def _calculate_element_sizes(self, size):
         allocated_size = len(self._content) - 1
