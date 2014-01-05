@@ -23,7 +23,7 @@ from jcn.terminal import Terminal
 from jcn.root import Root
 from jcn.base import Block
 from jcn.display_elements import Fill, ABCDisplayElement
-from jcn.container_elements import Box, Stack, Zebra
+from jcn.container_elements import Box, Stack, Zebra, VerticalSplitContainer
 
 
 class DisplayElementForTest(ABCDisplayElement):
@@ -200,3 +200,100 @@ class TestContainerElements(TestCase):
             Block(0, 2, ['...'], 'norm'),
             Block(0, 3, [',,,', ',,,'], 'normworld'),
             Block(0, 5, ['...'], 'norm')])
+
+
+class TestVerticalSplitContainer(TestCase):
+    def test_basic(self):
+        fill1 = Fill('1')
+        vsplit = VerticalSplitContainer(fill1)
+        blocks = vsplit.get_all_blocks(3, 1)
+        self.assertEqual(blocks, [Block(0, 0, ['111'], None)])
+        fill2 = Fill('2')
+        vsplit.add_element(fill2)
+        blocks = vsplit.get_all_blocks(5, 2)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['111', '111'], None),
+            Block(3, 0, ['22', '22'], None)])
+        fill3 = Fill('3')
+        vsplit.add_element(fill3, weight=2)
+        blocks = vsplit.get_all_blocks(8, 1)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['11'], None),
+            Block(2, 0, ['22'], None),
+            Block(4, 0, ['3333'], None)])
+        vsplit.remove_element(fill2)
+        blocks = vsplit.get_all_blocks(3, 1)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['1'], None),
+            Block(1, 0, ['33'], None)])
+
+    def test_constraints(self):
+        fill1 = Fill('1', name='1')
+        fill2 = Fill('2', name='2')
+        fill3 = Fill('3', name='3')
+        fill3.max_width = 2
+        vsplit = VerticalSplitContainer(fill1, fill2, fill3)
+        blocks = vsplit.get_all_blocks(9, 1)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['1111'], None),
+            Block(4, 0, ['222'], None),
+            Block(7, 0, ['33'], None)])
+        blocks = vsplit.get_all_blocks(3, 1)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['1'], None),
+            Block(1, 0, ['2'], None),
+            Block(2, 0, ['3'], None)])
+        fill3.max_width = None
+        fill3.min_width = 3
+        # FIXME: what to do when width is too small?
+        #blocks = vsplit.get_all_blocks(2, 1)
+        #self.assertEqual(blocks, [
+        #    Block(0, 0, ['1'], None),
+        #    Block(1, 0, ['2'], None)])
+        blocks = vsplit.get_all_blocks(5, 1)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['1'], None),
+            Block(1, 0, ['2'], None),
+            Block(2, 0, ['333'], None)])
+        blocks = vsplit.get_all_blocks(12, 1)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['1111'], None),
+            Block(4, 0, ['2222'], None),
+            Block(8, 0, ['3333'], None)])
+        fill3.min_width = fill3.max_width = 5
+        blocks = vsplit.get_all_blocks(7, 1)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['1'], None),
+            Block(1, 0, ['2'], None),
+            Block(2, 0, ['33333'], None)])
+        blocks = vsplit.get_all_blocks(19, 1)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['1111111'], None),
+            Block(7, 0, ['2222222'], None),
+            Block(14, 0, ['33333'], None)])
+        # Blocks may get more than they asked for, if we have surplus space to
+        # allocate:
+        vsplit.remove_element(fill2)
+        fill1.min_width = 3
+        blocks = vsplit.get_all_blocks(10, 1)
+        self.assertEqual(blocks, [
+            Block(0, 0, ['11111'], None),
+            Block(5, 0, ['33333'], None)])
+
+    def test_max_width(self):
+        fill1 = Fill('1')
+        fill1.max_width = 30
+        fill2 = Fill('2')
+        vsplit = VerticalSplitContainer(fill1, fill2)
+        self.assertIsNone(vsplit.max_width)
+        fill2.max_width = 12
+        self.assertEqual(vsplit.max_width, 42)
+
+    def test_min_width(self):
+        fill1 = Fill('1')
+        fill1.min_width = 7
+        fill2 = Fill('2')
+        vsplit = VerticalSplitContainer(fill1, fill2)
+        self.assertEqual(vsplit.min_width, 7)
+        fill2.min_width = 35
+        self.assertEqual(vsplit.min_width, 42)

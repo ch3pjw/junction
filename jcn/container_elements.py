@@ -223,7 +223,7 @@ class Zebra(Stack):
 
 
 class SplitContainerItemInfo:
-    def __init__(self, element, weight, size=0):
+    def __init__(self, element, weight, size):
         self.element = element
         self.weight = weight
         self.size = size
@@ -282,24 +282,25 @@ class SplitContainer(ABCContainerElement):
         return self.get_max_size('height')
 
     def _calculate_element_sizes(self, size):
-        allocated_size = len(self._content) - 1
+        allocated_size = 0
         item_infos = []
-        weighted_elements = []
+        weighted_items = []
         for element, weight in zip(self, self._weights):
-            item = SplitContainerItemInfo(
-                element, weight, element.get_min_size(self._dimension) or 0)
+            min_size = element.get_min_size(self._dimension) or 0
+            item = SplitContainerItemInfo(element, weight, min_size)
+            allocated_size += min_size
             item_infos.append(item)
             weighted_items.append((item, weight))
         for item in weighted_round_robin(weighted_items):
-            size_constraint = element.get_max_size(self._dimension)
+            if allocated_size >= size:
+                break
+            size_constraint = item.element.get_max_size(self._dimension)
             if size_constraint is None or item.size < size_constraint:
                 if item._round_robin_additions_to_ignore:
                     item._round_robin_additions_to_ignore -= 1
                 else:
                     item.size += 1
                     allocated_size += 1
-                if allocated_size >= size:
-                    break
         return [(item.element, item.size) for item in item_infos]
 
     def _get_elements_and_parameters(
