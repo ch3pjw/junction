@@ -256,6 +256,14 @@ class SplitContainer(ABCContainerElement):
         else:
             return max(mins)
 
+    @property
+    def min_width(self):
+        return self.get_min_size('width')
+
+    @property
+    def min_height(self):
+        return self.get_min_size('height')
+
     def get_max_size(self, dimension):
         maxs = [e.get_max_size(dimension) for e in self]
         if None in maxs:
@@ -264,6 +272,14 @@ class SplitContainer(ABCContainerElement):
             return sum(maxs)
         else:
             return max(maxs)
+
+    @property
+    def max_width(self):
+        return self.get_max_size('width')
+
+    @property
+    def max_height(self):
+        return self.get_max_size('height')
 
     def _calculate_element_sizes(self, size):
         allocated_size = len(self._content) - 1
