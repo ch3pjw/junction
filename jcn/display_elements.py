@@ -75,7 +75,7 @@ class Fill(ABCDisplayElement):
 
 
 class Text(ABCDisplayElement):
-    def __init__(self, content, *args, **kwargs):
+    def __init__(self, content='', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._content = content
 
