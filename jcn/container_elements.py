@@ -104,7 +104,7 @@ class ABCContainerElement(ABCUIElement):
     def _get_all_blocks(
             self, width, height, x=0, y=0, x_crop=None, y_crop=None,
             default_format=None):
-        blocks = []
+        blocks = [Block(x, y, [' ' * width] * height, default_format)]
         x_crop = x_crop or self._halign
         y_crop = y_crop or self._valign
         for element, width, height, x, y, default_format in (

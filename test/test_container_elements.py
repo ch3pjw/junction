@@ -74,6 +74,11 @@ class ContainerElementTestCase(TestCase):
         self.terminal.is_a_tty = False
         self.maxDiff = 0
 
+    def check_get_all_blocks(self, element, width, height, expected):
+        blocks = element.get_all_blocks(width, height)
+        for block in expected:
+            self.assertIn(block, blocks)
+
 
 class TestRoot(ContainerElementTestCase):
     def test_root(self):
@@ -100,21 +105,21 @@ class TestBox(ContainerElementTestCase):
     def test_box(self):
         fill = Fill()
         box = Box(fill)
-        blocks = box.get_all_blocks(4, 4)
-        self.assertCountEqual(blocks, [
-            Block(1, 1, ['..', '..'], box.default_format),
-            Block(0, 0, ['+--+'], box.default_format),
-            Block(0, 1, ['|', '|'], box.default_format),
-            Block(3, 1, ['|', '|'], box.default_format),
-            Block(0, 3, ['+--+'], box.default_format)])
+        self.check_get_all_blocks(
+            box, 4, 4,
+            [Block(1, 1, ['..', '..'], box.default_format),
+             Block(0, 0, ['+--+'], box.default_format),
+             Block(0, 1, ['|', '|'], box.default_format),
+             Block(3, 1, ['|', '|'], box.default_format),
+             Block(0, 3, ['+--+'], box.default_format)])
         box = Box(fill, chars='╓─┐│┘─╙║')
-        blocks = box.get_all_blocks(3, 3)
-        self.assertCountEqual(blocks, [
-            Block(1, 1, ['.'], box.default_format),
-            Block(0, 0, ['╓─┐'], box.default_format),
-            Block(0, 1, ['║'], box.default_format),
-            Block(2, 1, ['│'], box.default_format),
-            Block(0, 2, ['╙─┘'], box.default_format)])
+        self.check_get_all_blocks(
+            box, 3, 3,
+            [Block(1, 1, ['.'], box.default_format),
+             Block(0, 0, ['╓─┐'], box.default_format),
+             Block(0, 1, ['║'], box.default_format),
+             Block(2, 1, ['│'], box.default_format),
+             Block(0, 2, ['╙─┘'], box.default_format)])
         box = Box(fill, chars='[]')
         self.assertEqual(box.chars, '+-+|+-+|')
 
@@ -146,43 +151,43 @@ class TestStack(ContainerElementTestCase):
         fill2.default_format = 'more like two'
         fill2.min_height = 2
         stack = Stack(fill1, fill2)
-        blocks = stack.get_all_blocks(5, 4)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['11111'], fill1.default_format),
-            Block(0, 1, ['22222', '22222'], fill2.default_format)])
+        self.check_get_all_blocks(
+            stack, 5, 4,
+            [Block(0, 0, ['11111'], fill1.default_format),
+             Block(0, 1, ['22222', '22222'], fill2.default_format)])
         self.assertIsNone(stack.min_width)
-        blocks = stack.get_all_blocks(3, 2)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['111'], fill1.default_format),
-            Block(0, 1, ['222'], fill2.default_format)])
-        blocks = stack.get_all_blocks(4, 1)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['1111'], fill1.default_format)])
+        self.check_get_all_blocks(
+            stack, 3, 2,
+            [Block(0, 0, ['111'], fill1.default_format),
+             Block(0, 1, ['222'], fill2.default_format)])
+        self.check_get_all_blocks(
+            stack, 4, 1,
+            [Block(0, 0, ['1111'], fill1.default_format)])
         stack.valign = 'bottom'
-        blocks = stack.get_all_blocks(3, 2)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['222', '222'], fill2.default_format)])
+        self.check_get_all_blocks(
+            stack, 3, 2,
+            [Block(0, 0, ['222', '222'], fill2.default_format)])
         fill3 = Fill('3', name='3')
         stack.add_element(fill3)
-        blocks = stack.get_all_blocks(5, 4)
-        self.assertEqual(blocks, [
-            Block(0, 3, ['33333'], fill3.default_format),
-            Block(0, 1, ['22222', '22222'], fill2.default_format),
-            Block(0, 0, ['11111'], fill1.default_format)])
+        self.check_get_all_blocks(
+            stack, 5, 4,
+            [Block(0, 3, ['33333'], fill3.default_format),
+             Block(0, 1, ['22222', '22222'], fill2.default_format),
+             Block(0, 0, ['11111'], fill1.default_format)])
         stack.remove_element(fill2)
-        blocks = stack.get_all_blocks(5, 4)
-        self.assertEqual(blocks, [
-            Block(0, 3, ['33333'], fill3.default_format),
-            Block(0, 2, ['11111'], fill1.default_format)])
+        self.check_get_all_blocks(
+            stack, 5, 4,
+            [Block(0, 3, ['33333'], fill3.default_format),
+             Block(0, 2, ['11111'], fill1.default_format)])
 
     def test_update_stack(self):
         fill1 = Fill('1')
         fill2 = Fill('2')
         stack = Stack(fill1, fill2)
-        blocks = stack.get_all_blocks(3, 2)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['111'], None),
-            Block(0, 1, ['222'], None)])
+        self.check_get_all_blocks(
+            stack, 3, 2,
+            [Block(0, 0, ['111'], None),
+             Block(0, 1, ['222'], None)])
         fill2.default_format = 'new!'
         blocks = stack.get_updated_blocks()
         self.assertEqual(blocks, [Block(0, 1, ['222'], 'new!')])
@@ -197,9 +202,10 @@ class TestStack(ContainerElementTestCase):
         with self.assertRaises(ValueError):
             stack.get_updated_blocks()
         blocks = stack.get_all_blocks(2, 2)
-        self.assertCountEqual(blocks, [
-            Block(0, 0, ['11'], 'format_one'),
-            Block(0, 1, ['22'], 'format_two')])
+        self.check_get_all_blocks(
+            stack, 2, 2,
+            [Block(0, 0, ['11'], 'format_one'),
+             Block(0, 1, ['22'], 'format_two')])
         blocks = stack.get_updated_blocks()
         self.assertEqual(blocks, [])
         fill2.updated = True
@@ -216,55 +222,56 @@ class TestZebra(ContainerElementTestCase):
         zebra = Zebra(
             fill1, fill1, fill1, fill2, fill1, even_format='hello',
             odd_format='world')
-        blocks = zebra.get_all_blocks(3, 10)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['...'], 'hello'),
-            Block(0, 1, ['...'], 'world'),
-            Block(0, 2, ['...'], 'hello'),
-            Block(0, 3, [',,,', ',,,'], 'world'),
-            Block(0, 5, ['...'], 'hello')])
+        self.check_get_all_blocks(
+            zebra, 3, 10,
+            [Block(0, 0, ['...'], 'hello'),
+             Block(0, 1, ['...'], 'world'),
+             Block(0, 2, ['...'], 'hello'),
+             Block(0, 3, [',,,', ',,,'], 'world'),
+             Block(0, 5, ['...'], 'hello')])
         zebra.even_format = None
-        blocks = zebra.get_all_blocks(3, 10)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['...'], None),
-            Block(0, 1, ['...'], 'world'),
-            Block(0, 2, ['...'], None),
-            Block(0, 3, [',,,', ',,,'], 'world'),
-            Block(0, 5, ['...'], None)])
+        self.check_get_all_blocks(
+            zebra, 3, 10,
+            [Block(0, 0, ['...'], None),
+             Block(0, 1, ['...'], 'world'),
+             Block(0, 2, ['...'], None),
+             Block(0, 3, [',,,', ',,,'], 'world'),
+             Block(0, 5, ['...'], None)])
         zebra.default_format = 'norm'
-        blocks = zebra.get_all_blocks(3, 10)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['...'], 'norm'),
-            Block(0, 1, ['...'], 'normworld'),
-            Block(0, 2, ['...'], 'norm'),
-            Block(0, 3, [',,,', ',,,'], 'normworld'),
-            Block(0, 5, ['...'], 'norm')])
+        self.check_get_all_blocks(
+            zebra, 3, 10,
+            [Block(0, 0, ['...'], 'norm'),
+             Block(0, 1, ['...'], 'normworld'),
+             Block(0, 2, ['...'], 'norm'),
+             Block(0, 3, [',,,', ',,,'], 'normworld'),
+             Block(0, 5, ['...'], 'norm')])
 
 
-class TestVerticalSplitContainer(TestCase):
+class TestVerticalSplitContainer(ContainerElementTestCase):
     def test_basic(self):
         fill1 = Fill('1')
         vsplit = VerticalSplitContainer(fill1)
-        blocks = vsplit.get_all_blocks(3, 1)
-        self.assertEqual(blocks, [Block(0, 0, ['111'], None)])
+        self.check_get_all_blocks(
+            vsplit, 3, 1,
+            [Block(0, 0, ['111'], None)])
         fill2 = Fill('2')
         vsplit.add_element(fill2)
-        blocks = vsplit.get_all_blocks(5, 2)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['111', '111'], None),
-            Block(3, 0, ['22', '22'], None)])
+        self.check_get_all_blocks(
+            vsplit, 5, 2,
+            [Block(0, 0, ['111', '111'], None),
+             Block(3, 0, ['22', '22'], None)])
         fill3 = Fill('3')
         vsplit.add_element(fill3, weight=2)
-        blocks = vsplit.get_all_blocks(8, 1)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['11'], None),
-            Block(2, 0, ['22'], None),
-            Block(4, 0, ['3333'], None)])
+        self.check_get_all_blocks(
+            vsplit, 8, 1,
+            [Block(0, 0, ['11'], None),
+             Block(2, 0, ['22'], None),
+             Block(4, 0, ['3333'], None)])
         vsplit.remove_element(fill2)
-        blocks = vsplit.get_all_blocks(3, 1)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['1'], None),
-            Block(1, 0, ['33'], None)])
+        self.check_get_all_blocks(
+            vsplit, 3, 1,
+            [Block(0, 0, ['1'], None),
+             Block(1, 0, ['33'], None)])
 
     def test_constraints(self):
         fill1 = Fill('1', name='1')
@@ -272,16 +279,16 @@ class TestVerticalSplitContainer(TestCase):
         fill3 = Fill('3', name='3')
         fill3.max_width = 2
         vsplit = VerticalSplitContainer(fill1, fill2, fill3)
-        blocks = vsplit.get_all_blocks(9, 1)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['1111'], None),
-            Block(4, 0, ['222'], None),
-            Block(7, 0, ['33'], None)])
-        blocks = vsplit.get_all_blocks(3, 1)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['1'], None),
-            Block(1, 0, ['2'], None),
-            Block(2, 0, ['3'], None)])
+        self.check_get_all_blocks(
+            vsplit, 9, 1,
+            [Block(0, 0, ['1111'], None),
+             Block(4, 0, ['222'], None),
+             Block(7, 0, ['33'], None)])
+        self.check_get_all_blocks(
+            vsplit, 3, 1,
+            [Block(0, 0, ['1'], None),
+             Block(1, 0, ['2'], None),
+             Block(2, 0, ['3'], None)])
         fill3.max_width = None
         fill3.min_width = 3
         # FIXME: what to do when width is too small?
@@ -289,35 +296,35 @@ class TestVerticalSplitContainer(TestCase):
         #self.assertEqual(blocks, [
         #    Block(0, 0, ['1'], None),
         #    Block(1, 0, ['2'], None)])
-        blocks = vsplit.get_all_blocks(5, 1)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['1'], None),
-            Block(1, 0, ['2'], None),
-            Block(2, 0, ['333'], None)])
-        blocks = vsplit.get_all_blocks(12, 1)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['1111'], None),
-            Block(4, 0, ['2222'], None),
-            Block(8, 0, ['3333'], None)])
+        self.check_get_all_blocks(
+            vsplit, 5, 1,
+            [Block(0, 0, ['1'], None),
+             Block(1, 0, ['2'], None),
+             Block(2, 0, ['333'], None)])
+        self.check_get_all_blocks(
+            vsplit, 12, 1,
+            [Block(0, 0, ['1111'], None),
+             Block(4, 0, ['2222'], None),
+             Block(8, 0, ['3333'], None)])
         fill3.min_width = fill3.max_width = 5
-        blocks = vsplit.get_all_blocks(7, 1)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['1'], None),
-            Block(1, 0, ['2'], None),
-            Block(2, 0, ['33333'], None)])
-        blocks = vsplit.get_all_blocks(19, 1)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['1111111'], None),
-            Block(7, 0, ['2222222'], None),
-            Block(14, 0, ['33333'], None)])
+        self.check_get_all_blocks(
+            vsplit, 7, 1,
+            [Block(0, 0, ['1'], None),
+             Block(1, 0, ['2'], None),
+             Block(2, 0, ['33333'], None)])
+        self.check_get_all_blocks(
+            vsplit, 19, 1,
+            [Block(0, 0, ['1111111'], None),
+             Block(7, 0, ['2222222'], None),
+             Block(14, 0, ['33333'], None)])
         # Blocks may get more than they asked for, if we have surplus space to
         # allocate:
         vsplit.remove_element(fill2)
         fill1.min_width = 3
-        blocks = vsplit.get_all_blocks(10, 1)
-        self.assertEqual(blocks, [
-            Block(0, 0, ['11111'], None),
-            Block(5, 0, ['33333'], None)])
+        self.check_get_all_blocks(
+            vsplit, 10, 1,
+            [Block(0, 0, ['11111'], None),
+             Block(5, 0, ['33333'], None)])
 
     def test_max_width(self):
         fill1 = Fill('1')
