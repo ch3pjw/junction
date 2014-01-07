@@ -22,8 +22,9 @@ class LineBuffer:
     # Yes, the irony of re-implementing a bunch of stuff we've gone out of way
     # to turn off in the terminal is not lost on me ;-)
     def __init__(self):
-        self.content = ''
+        self._content = ''
         self.cursor_position = 0
+        self.content_updated_callback = None
         self.line_received_callback = None
 
     def __bool__(self):
@@ -34,6 +35,16 @@ class LineBuffer:
 
     def __str__(self):
         return self.content
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = value
+        if self.content_updated_callback:
+            self.content_updated_callback(self._content)
 
     def draw(self):
         # FIXME: Might want to reconsider how we do formatting so that the
@@ -130,6 +141,22 @@ class LineInput(ABCDisplayElement):
         super().__init__(*args, **kwargs)
         self.placeholder_text = placeholder_text
         self.line_buffer = LineBuffer()
+
+    @property
+    def content_updated_callback(self):
+        return self.line_buffer.content_updated_callback
+
+    @content_updated_callback.setter
+    def content_updated_callback(self, callback):
+        self.line_buffer.content_updated_callback = callback
+
+    @property
+    def line_received_callback(self):
+        return self.line_buffer.line_received_callback
+
+    @line_received_callback.setter
+    def line_received_callback(self, callback):
+        self.line_buffer.line_received_callback = callback
 
     def handle_input(self, data):
         self.line_buffer.handle_input(data)
