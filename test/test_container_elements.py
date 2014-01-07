@@ -26,7 +26,44 @@ from jcn.display_elements import Fill
 from jcn.container_elements import Box, Stack, Zebra, VerticalSplitContainer
 
 
+class TestBase(TestCase):
+    def test_add_element(self):
+        fill1 = Fill('1')
+        container = Stack()
+        self.assertIsNone(container._active_element)
+        container.add_element(fill1)
+        self.assertEqual(len(container), 1)
+        self.assertIn(fill1, container)
+        self.assertIs(container._active_element, fill1)
+        fill2 = Fill('2')
+        container.add_element(fill2)
+        self.assertEqual(len(container), 2)
+        self.assertIn(fill2, container)
+        self.assertIs(container._active_element, fill1)
 
+    def test_remove_element(self):
+        container = Stack()
+        fill1 = Fill('1')
+        fill2 = Fill('2')
+        with self.assertRaises(ValueError):
+            container.remove_element(fill1)
+        container = Stack(fill1, fill2)
+        self.assertEqual(len(container), 2)
+        container.remove_element(fill1)
+        self.assertEqual(len(container), 1)
+        self.assertIn(fill2, container)
+        self.assertIsNone(container._active_element)
+
+    def test_replace_element(self):
+        fill1 = Fill('1', name='1')
+        fill2 = Fill('2', name='2')
+        fill3 = Fill('3', name='3')
+        container = Stack(fill1, fill2)
+        self.assertEqual(len(container), 2)
+        container.replace_element(fill1, fill3)
+        self.assertEqual(len(container), 2)
+        self.assertNotIn(fill1, container)
+        self.assertIs(container[0], fill3)
 
 
 class ContainerElementTestCase(TestCase):

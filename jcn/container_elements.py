@@ -32,6 +32,15 @@ class ABCContainerElement(ABCUIElement):
     def __iter__(self):
         return iter(self._content)
 
+    def __len__(self):
+        return len(self._content)
+
+    def __contains__(self, element):
+        return element in self._content
+
+    def __getitem__(self, index):
+        return self._content[index]
+
     @property
     def root(self):
         return self._root
@@ -59,13 +68,24 @@ class ABCContainerElement(ABCUIElement):
 
     def add_element(self, element):
         self._content.append(element)
-        self._active_element = element
+        if self._active_element is None:
+            self._active_element = element
         element.root = self.root
+        self.updated = True
 
     def remove_element(self, element):
         self._content.remove(element)
         if element is self._active_element:
             self._active_element = None
+        self.updated = True
+
+    def replace_element(self, old_element, new_element):
+        i = self._content.index(old_element)
+        self._content[i] = new_element
+        if old_element is self._active_element:
+            self._active_element = new_element
+        new_element.root = self.root
+        self.updated = True
 
     def _get_all_blocks(
             self, width, height, x=0, y=0, x_crop=None, y_crop=None,
