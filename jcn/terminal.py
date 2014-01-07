@@ -247,6 +247,7 @@ class Keyboard:
         self._sequence_to_name = {
             '\x1b': 'esc',
             ' ': 'space',
+            '\n': 'return',
 
             '\x1b[A': 'up',
             '\x1b[B': 'down',
@@ -289,9 +290,10 @@ class Keyboard:
     def _create_ctrl_keys(self):
         ctrl_keys = {}
         for i in range(26):
-            name = 'ctrl ' + chr(ord('a') + i - 1)
-            sequence = chr(i)
-            ctrl_keys[sequence] = name
+            if i != 10:
+                name = 'ctrl ' + chr(ord('a') + i - 1)
+                sequence = chr(i)
+                ctrl_keys[sequence] = name
         return ctrl_keys
 
     def _create_alt_keys(self):
