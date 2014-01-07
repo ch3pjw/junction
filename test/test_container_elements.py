@@ -29,7 +29,7 @@ from jcn.container_elements import Box, Stack, Zebra, VerticalSplitContainer
 
 
 
-class TestContainerElements(TestCase):
+class ContainerElementTestCase(TestCase):
     def setUp(self):
         self.terminal = Terminal()
         self.stream = StringIO()
@@ -37,6 +37,8 @@ class TestContainerElements(TestCase):
         self.terminal.is_a_tty = False
         self.maxDiff = 0
 
+
+class TestRoot(ContainerElementTestCase):
     def test_root(self):
         loop = asyncio.get_event_loop()
         fill = Fill()
@@ -56,6 +58,8 @@ class TestContainerElements(TestCase):
         self.assertIs(root.element, fill2)
         self.assertIs(fill2.root, root)
 
+
+class TestBox(ContainerElementTestCase):
     def test_box(self):
         fill = Fill()
         box = Box(fill)
@@ -77,6 +81,8 @@ class TestContainerElements(TestCase):
         box = Box(fill, chars='[]')
         self.assertEqual(box.chars, '+-+|+-+|')
 
+
+class TestStack(ContainerElementTestCase):
     def test_stack_limits(self):
         stack = Stack()
         self.assertEqual(stack.min_height, 0)
@@ -164,6 +170,8 @@ class TestContainerElements(TestCase):
         self.assertCountEqual(blocks, [
             Block(0, 1, ['22'], fill2.default_format)])
 
+
+class TestZebra(ContainerElementTestCase):
     def test_zebra(self):
         fill1 = Fill()
         fill2 = Fill(',')
