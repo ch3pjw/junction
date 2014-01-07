@@ -22,12 +22,12 @@ from .util import weighted_round_robin
 class ABCContainerElement(ABCUIElement):
     def __init__(self, *elements, **kwargs):
         self._content = []
-        self._active_element = None
+        self.active_element = None
+        self._root = None
+        self._updated = True
         super().__init__(**kwargs)
         for element in elements:
             self.add_element(element)
-        self._root = None
-        self._updated = True
 
     def __iter__(self):
         return iter(self._content)
@@ -68,22 +68,22 @@ class ABCContainerElement(ABCUIElement):
 
     def add_element(self, element):
         self._content.append(element)
-        if self._active_element is None:
-            self._active_element = element
+        if self.active_element is None:
+            self.active_element = element
         element.root = self.root
         self.updated = True
 
     def remove_element(self, element):
         self._content.remove(element)
-        if element is self._active_element:
-            self._active_element = None
+        if element is self.active_element:
+            self.active_element = None
         self.updated = True
 
     def replace_element(self, old_element, new_element):
         i = self._content.index(old_element)
         self._content[i] = new_element
-        if old_element is self._active_element:
-            self._active_element = new_element
+        if old_element is self.active_element:
+            self.active_element = new_element
         new_element.root = self.root
         self.updated = True
 
@@ -108,7 +108,7 @@ class ABCContainerElement(ABCUIElement):
         return blocks
 
     def handle_input(self, data):
-        return self._active_element.handle_input(data)
+        return self.active_element.handle_input(data)
 
 
 class Box(ABCContainerElement):
@@ -149,16 +149,16 @@ class Box(ABCContainerElement):
 
     @property
     def max_width(self):
-        return self._active_element.max_width + 2
+        return self.active_element.max_width + 2
 
     @property
     def max_height(self):
-        return self._active_element.max_height + 2
+        return self.active_element.max_height + 2
 
     def _get_elements_and_parameters(
             self, width, height, x, y, default_format):
         yield (
-            self._active_element, width - 2, height - 2, x + 1, y + 1,
+            self.active_element, width - 2, height - 2, x + 1, y + 1,
             default_format)
 
     def _get_all_blocks(self, width, height, x=0, y=0, *args, **kwargs):
