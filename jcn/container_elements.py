@@ -112,7 +112,10 @@ class ABCContainerElement(ABCUIElement):
         return blocks
 
     def handle_input(self, data):
-        return self.active_element.handle_input(data)
+        if self.active_element:
+            return self.active_element.handle_input(data)
+        else:
+            return data
 
 
 class Box(ABCContainerElement):
