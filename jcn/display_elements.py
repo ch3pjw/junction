@@ -99,6 +99,8 @@ class Text(ABCDisplayElement):
 
 
 class Label(Text):
+    min_height = max_height = 1
+
     def _get_lines(self, width, height):
         return [self.content]
 

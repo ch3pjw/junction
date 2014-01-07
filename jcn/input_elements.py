@@ -137,6 +137,8 @@ class Input(Text):
 
 
 class LineInput(ABCDisplayElement):
+    min_height = max_height = 1
+
     def __init__(self, placeholder_text, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.placeholder_text = placeholder_text
