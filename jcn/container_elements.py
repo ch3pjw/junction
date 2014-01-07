@@ -58,6 +58,8 @@ class ABCContainerElement(ABCUIElement):
     @updated.setter
     def updated(self, value):
         self._updated = value
+        if value and self.root:
+            self.root.update()
 
     @abstractmethod
     def _get_elements_and_parameters(
@@ -71,7 +73,8 @@ class ABCContainerElement(ABCUIElement):
         if self.active_element is None:
             self.active_element = element
         element.root = self.root
-        self.updated = True
+        if self.root:
+            self.root.draw()
 
     def remove_element(self, element):
         self._content.remove(element)
@@ -85,7 +88,8 @@ class ABCContainerElement(ABCUIElement):
         if old_element is self.active_element:
             self.active_element = new_element
         new_element.root = self.root
-        self.updated = True
+        if self.root:
+            self.root.draw()
 
     def _get_all_blocks(
             self, width, height, x=0, y=0, x_crop=None, y_crop=None,
