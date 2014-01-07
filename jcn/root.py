@@ -127,7 +127,10 @@ class Root(ABCUIElement):
                 self._handle_screen_resize()):
             def read_stdin():
                 data = self.terminal.infile.read()
-                self.element.handle_input(self.keyboard[data])
+                unhandled_input = self.element.handle_input(
+                    self.keyboard[data])
+                if unhandled_input:
+                    self.handle_input(unhandled_input)
             if self.terminal.infile.isatty():
                 self.loop.add_reader(self.terminal.infile, read_stdin)
             self.draw()

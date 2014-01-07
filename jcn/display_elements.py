@@ -87,6 +87,8 @@ class Text(ABCDisplayElement):
     def content(self, value):
         self._content = value
         self.updated = True
+        if self.root:
+            self.root.update()
 
     def _get_lines(self, width, height):
         unwrapped_lines = self.content.splitlines()
@@ -124,6 +126,8 @@ class ProgressBar(ABCDisplayElement):
     def fraction(self, value):
         self._fraction = clamp(value, 0, 1)
         self.updated = True
+        if self.root:
+            self.root.update()
 
     def _get_lines(self, width, height):
         width = max(width, self.min_width) - 2
