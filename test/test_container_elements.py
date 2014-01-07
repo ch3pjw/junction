@@ -15,24 +15,18 @@
 
 # coding=utf-8
 from unittest import TestCase
-from mock import Mock, patch
+from mock import patch
 import asyncio
 from io import StringIO
 
 from jcn.terminal import Terminal
 from jcn.root import Root
 from jcn.base import Block
-from jcn.display_elements import Fill, ABCDisplayElement
+from jcn.display_elements import Fill
 from jcn.container_elements import Box, Stack, Zebra, VerticalSplitContainer
 
 
-class DisplayElementForTest(ABCDisplayElement):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._draw = Mock()
 
-    def _get_block(self, *args, **kwargs):
-        return ['hello', 'world']
 
 
 class TestContainerElements(TestCase):
