@@ -107,6 +107,7 @@ class ProgressBar(ABCDisplayElement):
     max_height = 1
 
     def __init__(self, chars=None):
+        super().__init__()
         if not chars or len(chars) < 4:
             chars = '[ -=]'
         self._start_cap = chars[0]
