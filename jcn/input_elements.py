@@ -81,6 +81,8 @@ class LineBuffer:
             self.cursor_position = len(self.content)
         elif data == 'return':
             self._line_received()
+        else:
+            return data
 
     def _insert_char(self, char):
         pos = self.cursor_position
@@ -161,10 +163,11 @@ class LineInput(ABCDisplayElement):
         self.line_buffer.line_received_callback = callback
 
     def handle_input(self, data):
-        self.line_buffer.handle_input(data)
+        result = self.line_buffer.handle_input(data)
         self.updated = True
         # FIXME: this is a temporary hack to try proof of concept
         self.root.update()
+        return result
 
     def _get_lines(self, width, height):
         if self.line_buffer:
