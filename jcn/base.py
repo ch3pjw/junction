@@ -221,5 +221,5 @@ class ABCUIElement(metaclass=ABCMeta):
 
     #@abstractmethod
     def handle_input(self, data):
-        print('{!r} got {!r}'.format(self, data))
+        #print('{!r} got {!r}'.format(self, data))
         return data
