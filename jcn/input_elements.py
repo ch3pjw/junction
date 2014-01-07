@@ -24,6 +24,7 @@ class LineBuffer:
     def __init__(self):
         self.content = ''
         self.cursor_position = 0
+        self.line_received_callback = None
 
     def __bool__(self):
         return bool(self.content)
@@ -48,6 +49,7 @@ class LineBuffer:
 
     def clear(self):
         self.content = ''
+        self.cursor_position = 0
 
     def handle_input(self, data):
         if len(data) == 1:
@@ -66,6 +68,8 @@ class LineBuffer:
             self.cursor_position = 0
         elif data == 'end':
             self.cursor_position = len(self.content)
+        elif data == 'return':
+            self._line_received()
 
     def _insert_char(self, char):
         pos = self.cursor_position
@@ -90,6 +94,11 @@ class LineBuffer:
     def _move_cursor(self, delta):
         self.cursor_position = clamp(
             self.cursor_position + delta, min_=0, max_=len(self))
+
+    def _line_received(self):
+        if self.line_received_callback:
+            self.line_received_callback(self.content)
+        self.clear()
 
 
 class Input(Text):
