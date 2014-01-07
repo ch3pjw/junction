@@ -87,6 +87,9 @@ class ABCContainerElement(ABCUIElement):
             blocks.extend(element.get_updated_blocks(default_format))
         return blocks
 
+    def handle_input(self, data):
+        return self._active_element.handle_input(data)
+
 
 class Box(ABCContainerElement):
     min_width = 2
