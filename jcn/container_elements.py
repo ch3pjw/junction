@@ -42,6 +42,16 @@ class ABCContainerElement(ABCUIElement):
         return self._content[index]
 
     @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = value
+        if self.root:
+            self.root.draw()
+
+    @property
     def root(self):
         return self._root
 
@@ -267,6 +277,10 @@ class SplitContainer(ABCContainerElement):
     def __init__(self, *elements, **kwargs):
         self._weights = []
         super().__init__(*elements, **kwargs)
+        self._min_width = None
+        self._max_width = None
+        self._min_height = None
+        self._max_height = None
 
     def add_element(self, element, weight=1):
         self._weights.append(weight)
@@ -278,6 +292,9 @@ class SplitContainer(ABCContainerElement):
         super().remove_element(element)
 
     def get_min_size(self, dimension):
+        override_min = getattr(self, '_min_' + dimension)
+        if override_min:
+            return override_min
         mins = [
             e.get_min_size(dimension) for e in self if
             e.get_min_size(dimension) is not None]
@@ -290,11 +307,22 @@ class SplitContainer(ABCContainerElement):
     def min_width(self):
         return self.get_min_size('width')
 
+    @min_width.setter
+    def min_width(self, value):
+        self._min_width = value
+
     @property
     def min_height(self):
         return self.get_min_size('height')
 
+    @min_height.setter
+    def min_height(self, value):
+        self._min_height = value
+
     def get_max_size(self, dimension):
+        override_max = getattr(self, '_max_' + dimension)
+        if override_max:
+            return override_max
         maxs = [e.get_max_size(dimension) for e in self]
         if None in maxs:
             return
@@ -307,9 +335,17 @@ class SplitContainer(ABCContainerElement):
     def max_width(self):
         return self.get_max_size('width')
 
+    @max_width.setter
+    def max_width(self, value):
+        self._max_width = value
+
     @property
     def max_height(self):
         return self.get_max_size('height')
+
+    @max_height.setter
+    def max_height(self, value):
+        self._max_height = value
 
     def _calculate_element_sizes(self, size):
         allocated_size = 0
