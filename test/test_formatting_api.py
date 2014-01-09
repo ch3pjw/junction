@@ -277,6 +277,25 @@ class NewTestStringWithFormatting(TestCase):
             StringWithFormatting(StringComponent('red', 'text'))]
         self.assertEqual(result, expected)
 
+    def test_strip(self):
+        s = StringWithFormatting((
+            StringComponent('green', '  hello world '),))
+        result = s.strip()
+        expected = StringWithFormatting((
+            StringComponent('green', 'hello world'),))
+        self.assertEqual(result, expected)
+        s = StringWithFormatting((
+            StringComponent('blue', ' hello '),
+            StringComponent('red', 'world ')))
+        result = s.strip()
+        expected = StringWithFormatting((
+            StringComponent('blue', 'hello '),
+            StringComponent('red', 'world')))
+        print(repr(result))
+        print('-' * 20)
+        print(repr(expected))
+        self.assertEqual(result, expected)
+
 
 class NewTestStringComponent(TestCase):
     def test_basic(self):

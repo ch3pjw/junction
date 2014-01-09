@@ -437,7 +437,7 @@ class StringComponent(str):
             return super().__getattribute__('_method_cache')[name]
         except KeyError:
             attr = super().__getattribute__(name)
-            if callable(attr):
+            if callable(attr) and not name.startswith('__'):
                 @wraps(attr)
                 def wrapped_str_method(*args, **kwargs):
                     result = attr(*args, **kwargs)
@@ -446,7 +446,7 @@ class StringComponent(str):
                             self.__class__(self.placeholder, s) for s in
                             result]
                     elif isinstance(result, str):
-                        result.placeholder = self.placeholder
+                        result = self.__class__(self.placeholder, result)
                     return result
                 self._method_cache[name] = wrapped_str_method
                 return wrapped_str_method
