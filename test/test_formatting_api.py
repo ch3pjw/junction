@@ -18,9 +18,11 @@ from io import StringIO
 from mock import patch
 
 from jcn.formatting import (
-    EscapeSequenceStack, StringComponentSpec, NullComponentSpec,
-    FormatPlaceholder, ParameterizingFormatPlaceholder, StylePlaceholder,
-    FormatPlaceholderFactory, StylePlaceholderFactory, StringWithFormatting)
+    EscapeSequenceStack, StringComponentSpec, StringComponent,
+    NullComponentSpec, FormatPlaceholder, ParameterizingFormatPlaceholder,
+    StylePlaceholder, FormatPlaceholderFactory, StylePlaceholderFactory,
+    StringWithFormatting)
+from jcn.textwrap import _TextWrapper
 from jcn import Terminal, Text, Fill
 
 
@@ -246,6 +248,62 @@ class TestStringWithFormatting(TestCase):
             self.terminal.normal)
         self.assertIsInstance(result, str)
         self.assertEqual(repr(result), repr(expected))
+
+
+class NewTestStringWithFormatting(TestCase):
+    def test_chunk_simple(self):
+        s = StringWithFormatting('This is some text')
+        result = s.chunk(_TextWrapper.wordsep_re)
+        expected = [
+            StringWithFormatting(StringComponent(None, chunk)) for chunk in
+            ['This', ' ', 'is', ' ', 'some', ' ', 'text']]
+        self.assertEqual(result, expected)
+
+    def test_chunk_with_formatting(self):
+        content = (
+            StringComponent('blue', 'This is so'),
+            StringComponent('red', 'me text'))
+        s = StringWithFormatting(content)
+        result = s.chunk(_TextWrapper.wordsep_re)
+        expected = [
+            StringWithFormatting(StringComponent('blue', 'This')),
+            StringWithFormatting(StringComponent('blue', ' ')),
+            StringWithFormatting(StringComponent('blue', 'is')),
+            StringWithFormatting(StringComponent('blue', ' ')),
+            StringWithFormatting((
+                StringComponent('blue', 'so'),
+                StringComponent('red', 'me'))),
+            StringWithFormatting(StringComponent('red', ' ')),
+            StringWithFormatting(StringComponent('red', 'text'))]
+        self.assertEqual(result, expected)
+
+
+class NewTestStringComponent(TestCase):
+    def test_basic(self):
+        s = StringComponent('blue', 'hello world')
+        self.assertEqual(str(s), 'hello world')
+        self.assertEqual(s.placeholder, 'blue')
+
+    def test_eq(self):
+        s = StringComponent('yellow', 'hello world')
+        self.assertNotEqual(s, 'hello world')
+        self.assertNotEqual(s, StringComponent(None, 'hello world'))
+        self.assertNotEqual(s, StringComponent('yellow', 'not hello world'))
+        self.assertEqual(s, StringComponent('yellow', 'hello world'))
+        s = StringComponent(None, 'plain')
+        self.assertEqual(s, 'plain')
+        self.assertEqual(s, StringComponent(None, 'plain'))
+
+    def test_split(self):
+        s = StringComponent('blue', 'hello world')
+        result = s.split()
+        expected = [
+            StringComponent('blue', 'hello'),
+            StringComponent('blue', 'world')]
+        self.assertEqual(result, expected)
+        # Exercise cache of string method
+        result = s.split()
+        self.assertEqual(result, expected)
 
 
 class TestDefaultFormatting(TestCase):

@@ -14,6 +14,7 @@
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
 
 from functools import wraps
+from itertools import islice
 
 from .terminal import get_terminal
 from .util import InheritDocstrings
@@ -407,10 +408,56 @@ class NullComponentSpec(StringComponentSpec):
         return self.content
 
 
+class StringComponent(str):
+    _method_cache = {}
+
+    def __new__(cls, placeholder, string, *args, **kwargs):
+        obj = super().__new__(cls, string, *args, **kwargs)
+        obj.placeholder = placeholder
+        return obj
+
+    def __repr__(self):
+        return '{}({!r}, {})'.format(
+            self.__class__.__name__, self.placeholder, super().__repr__())
+
+    def __eq__(self, other):
+        if super().__eq__(other):
+            if hasattr(other, 'placeholder'):
+                return other.placeholder == self.placeholder
+            else:
+                return self.placeholder is None
+        else:
+            return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __getattribute__(self, name):
+        try:
+            return super().__getattribute__('_method_cache')[name]
+        except KeyError:
+            attr = super().__getattribute__(name)
+            if callable(attr):
+                @wraps(attr)
+                def wrapped_str_method(*args, **kwargs):
+                    result = attr(*args, **kwargs)
+                    if isinstance(result, list):
+                        result = [
+                            self.__class__(self.placeholder, s) for s in
+                            result]
+                    elif isinstance(result, str):
+                        result.placeholder = self.placeholder
+                    return result
+                self._method_cache[name] = wrapped_str_method
+                return wrapped_str_method
+            else:
+                return attr
+
+
 class StringWithFormatting:
     '''FIXME:
     '''
-    __slots__ = ['_content']
+    __slots__ = ['_content', '_str']
 
     def __init__(self, content):
         '''FIXME:
@@ -418,29 +465,23 @@ class StringWithFormatting:
         '''
         if isinstance(content, self.__class__):
             self._content = content._content
+        elif isinstance(content, StringComponent):
+            self._content = (content,)
         elif isinstance(content, str):
-            self._content = (None, (content,))
+            self._content = (StringComponent(None, content),)
         else:
             self._content = content
-        self._str = None
+        self._str = None  # FIXME: needed?
 
     def __repr__(self):
         return '{}({!r})'.format(
             self.__class__.__name__, self._content)
 
     def __str__(self):
-        return ''.join(map(lambda s: ''.join(s[1]), self._content))
+        return ''.join(self._content)
 
     def __len__(self):
-        return sum(self._get_len_of_section(section) for section self._content)
-
-    def _get_len_of_section(self, section):
-        '''
-        :returns int: The length of the given section of the string (a bunch of
-            strings which all have the same formatting applied)
-        '''
-        _placholder, strings = section
-        return sum(len(string) for string in strings)
+        return sum(len(s.string) for s in self._content)
 
     def __bool__(self):
         # We're not False, even if we only have content that isn't printable
@@ -472,12 +513,12 @@ class StringWithFormatting:
         return self.__class__(new_content + self._content)
 
     def __iter__(self):
-        for placeholder, strings in self._content:
-            for string in string:
-                for char in string:
-                    yield char
+        for placeholder, string in self._content:
+            for char in string:
+                yield char
 
     def _get_slice(self, start, stop):
+        #FIXME: this is going to be broken, again, probably
         slice_start = start if start is not None else 0
         slice_stop = stop if stop is not None else len(self)
         slice_stop = min(slice_stop, len(self))
@@ -510,6 +551,7 @@ class StringWithFormatting:
         '''We attemt to provide access to all methods that are available on a
         regular str object, whilst wrapping up answers appropriately.
         '''
+        # FIXME: definitely broken
         str_cls_method = getattr(str, name)
         @wraps(str_cls_method)
         def str_method_executor(*args, **kwargs):
@@ -525,37 +567,28 @@ class StringWithFormatting:
                 return reference
         return str_method_executor
 
-    def _apply_str_method(self, method_name, *args, reference, **kwargs):
-        '''Applies the named method of str to self by calling it on each of our
-        component specs and aggregating the return values correctly.
-
-        :parameter method_name: the name of the (*list-returning*) str method
-            to call
-        :parameter reference: a reference result (i.e. the result of the method
-            call on a normal string) so that we can fix any breaks in our
-            return values caused by boundaries between formats, rather than the
-            called method.
-        '''
-        strings_with_formatting = []
-        for spec in self._content:
-            specs = getattr(spec, method_name)(*args, **kwargs)
-            strings_with_formatting.extend(map(self.__class__, specs))
-        result = []
-        for str_unit in reference:
-            if str_unit:
-                formatted_unit = strings_with_formatting.pop(0)
-                while True:
-                    if str(formatted_unit) == str_unit:
-                        result.append(formatted_unit)
-                        break
-                    formatted_unit += strings_with_formatting.pop(0)
-        return result
-
     def chunk(self, regex):
         '''FIXME:
         '''
-        reference = regex.split(str(self))
-        return self._apply_str_method('chunk', regex, reference=reference)
+        chunks = []
+        for component in self._content:
+            chunks.extend(
+                StringComponent(component.placeholder, s) for s in
+                regex.split(str(component)))
+        for i, (chunk1, chunk2) in enumerate(
+                zip(chunks, islice(chunks, 1, None))):
+            if chunk1.placeholder is not chunk2.placeholder:
+                # We're crossing a boundary between placeholders
+                if chunk1.strip() and chunk2.strip():
+                    # There's no whitespace at the boundary, so stick the
+                    # chunks together
+                    chunks[i:i + 2] = [self.__class__((chunk1, chunk2))]
+                else:
+                    chunks[i] = self.__class__((chunk1,))
+            else:
+                chunks[i] = self.__class__((chunk1,))
+        chunks[-1] = self.__class__((chunk2,))
+        return chunks
 
     def strip(self):
         '''FIXME:
@@ -576,4 +609,4 @@ class StringWithFormatting:
         esc_seq_stack = esc_seq_stack or EscapeSequenceStack(terminal.normal)
         return ''.join(
             s.populate(terminal, styles, esc_seq_stack) for s in self._content)
-    populate.__doc__ = StringComponentSpec.populate.__doc__
+    #FIXME: populate.__doc__ = StringComponentSpec.populate.__doc__
