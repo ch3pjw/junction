@@ -13,11 +13,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
 
+import types
 from functools import wraps
 from itertools import islice
 
 from .terminal import get_terminal
 from .util import InheritDocstrings
+
+
+class StringComponentSpec:
+    pass
 
 
 class EscapeSequenceStack:
@@ -110,7 +115,12 @@ class Placeholder(metaclass=InheritDocstrings):
         :returns: A :class:`StringComponentSpec` object referencing both the
             given content and this :class:`Placeholder` instance.
         '''
-        return StringComponentSpec(self, content)
+        if isinstance(content, StringComponent):
+            return StringComponent(content.placeholder + self, content)
+        elif isinstance(content, StringWithFormatting):
+            return content.apply_placeholder(self)
+        else:
+            return StringComponent(self, content)
 
     def populate(self, terminal, styles):
         '''
@@ -183,9 +193,21 @@ class StylePlaceholder(Placeholder):
         return style.populate(terminal, styles)
 
 
+class NullPlaceholder(Placeholder):
+    def __init__(self):
+        super().__init__('')
+
+    def __repr__(self):
+        return '{}()'.format(self.__class__.__name__)
+
+    def populate(self, terminal, styles):
+        return ''
+
+null_placeholder = NullPlaceholder()
+
+
 class PlaceholderGroup:
     '''FIXME:
-    Note why we don't have a __call__ method
     '''
     def __init__(self, placeholders=None):
         if isinstance(placeholders, self.__class__):
@@ -197,6 +219,12 @@ class PlaceholderGroup:
             self.__class__.__name__,
             ', '.join(repr(p) for p in self.placeholders))
 
+    def __eq__(self, other):
+        if hasattr(other, 'placeholders'):
+            return other.placeholders == self.placeholders
+        else:
+            return False
+
     def __add__(self, other):
         if isinstance(other, Placeholder):
             return self.__class__(self.placeholders + (other,))
@@ -204,6 +232,11 @@ class PlaceholderGroup:
             return self.__class__(self.placeholders + other.placeholders)
         else:
             raise TypeError('FIXME: add message')
+
+    def __call__(self, content):
+        '''FIXME:
+        '''
+        return StringComponent(self, content)
 
     def populate(self, terminal, styles):
         escape_sequence = ''
@@ -261,153 +294,6 @@ class StylePlaceholderFactory:
         return self._defined_styles[name]
 
 
-class StringComponentSpec:
-    '''A string component specification is an object that will be used to form
-    part of a string-like object that contains formatting information as well
-    as printable characters.
-    '''
-    __slots__ = ['placeholder', 'content', '_str']
-
-    def __init__(self, placeholder, content):
-        '''FIXME:
-        '''
-        self.placeholder = placeholder
-        self.content = content
-        self._str = None
-
-    def __repr__(self):
-        return '{}({!r}, {!r})'.format(
-            self.__class__.__name__, self.placeholder, self.content)
-
-    def __str__(self):
-        if self._str is None:
-            # We're supposed to be immutable, and calculating our str is
-            # potentially quite expensive, so cache the result:
-            self._str = str(self.content)
-        return self._str
-
-    def __getattr__(self, attr_name):
-        '''FIXME:
-        '''
-        str_method = getattr(self.content, attr_name)
-        @wraps(str_method)
-        def do_str_method(*args, **kwargs):
-            result = str_method(*args, **kwargs)
-            if isinstance(result, str):
-                return self.__class__(self.placeholder, result)
-            elif isinstance(result, list):
-                return [self.__class__(self.placeholder, s) for s in result]
-            else:
-                return result
-        return do_str_method
-
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return (
-                self.placeholder == other.placeholder and
-                self.content == other.content)
-        else:
-            return False
-
-    def __len__(self):
-        return len(self.content)
-
-    def __bool__(self):
-        return True
-
-    def __iter__(self):
-        return iter(self.content)
-
-    def __getitem__(self, index):
-        '''FIXME:
-        '''
-        return self.__class__(self.placeholder, self.content[index])
-
-    def _sanitise_other(self, other):
-        if isinstance(other, str):
-            return NullComponentSpec(other)
-        elif isinstance(other, StringComponentSpec):
-            return other
-        else:
-            raise TypeError('Cannot add object with type {} to {!r}'.format(
-                type(other), self))
-
-    def __add__(self, other):
-        other = self._sanitise_other(other)
-        result = StringWithFormatting((self, other))
-        return result
-
-    def __radd__(self, other):
-        other = self._sanitise_other(other)
-        return StringWithFormatting((other, self))
-
-    def chunk(self, regex):
-        '''FIXME:
-        '''
-        if hasattr(self.content, 'chunk'):
-            chunks = self.content.chunk(regex)
-        else:
-            chunks = regex.split(self.content)
-        chunks = [self.__class__(self.placeholder, c) for c in chunks if c]
-        return chunks
-
-    def populate(self, terminal=None, styles=None, esc_seq_stack=None):
-        '''Get the concrete (including terminal escape sequences)
-        representation of this string.
-
-        :parameter Terminal terminal: The terminal object to use for turning
-            formatting attributes such as :attr:`Root.format.blue` into
-            concrete escape sequences.
-        :parameter styles: An object from which to look up style definitions,
-            which ultimately resolve to escape sequences, but may resolve to
-            other intermediaries, including other styles.
-        :type styles: StylePlaceholderFactory or dict
-        :parameter EscapeSequenceStack esc_seq_stack: An
-            :class:`EscapeSequenceStack` for tracking which styles have been
-            applied to the given terminal, so that during the drawing process
-            we can 'undo' the last format that we applied to the terminal.
-        :returns str: Returns a concrete string, containing all the escape
-            sequences required to render the string to the terminal with the
-            desired formatting.
-
-        .. note::
-            All parameters are optional, and will be populated with sensible
-            defaults if ommitted. This is to assist testing and experimentation
-            with lower-level parts of Junction. If you want to use a
-            :class:`StringWithFormatting` object as part of a wider
-            application, it is suggested that you always pass all the arguments
-            explicitly.
-        '''
-        terminal = terminal or get_terminal()
-        styles = styles or {}
-        esc_seq_stack = esc_seq_stack or EscapeSequenceStack(terminal.normal)
-        esc_seq = self.placeholder.populate(terminal, styles)
-        esc_seq_stack.push(esc_seq)
-        if hasattr(self.content, 'populate'):
-            content = self.content.populate(
-                terminal, styles, esc_seq_stack)
-        else:
-            content = self.content
-        return esc_seq + content + esc_seq_stack.pop()
-
-
-class NullComponentSpec(StringComponentSpec):
-    '''FIXME:
-    '''
-    def __init__(self, *args):
-        if len(args) == 1:
-            super().__init__(placeholder=None, content=args[0])
-        else:
-            super().__init__(*args)
-
-    def __repr__(self):
-        return '{}({!r})'.format(self.__class__.__name__, self.content)
-
-    def populate(self, *args, **kwargs):
-        assert isinstance(self.content, str)
-        return self.content
-
-
 class StringComponent(str):
     _method_cache = {}
 
@@ -425,22 +311,36 @@ class StringComponent(str):
             if hasattr(other, 'placeholder'):
                 return other.placeholder == self.placeholder
             else:
-                return self.placeholder is None
+                return self.placeholder is null_placeholder
         else:
             return False
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def __getitem__(self, index):
+        return self.__class__(self.placeholder, super().__getitem__(index))
+
+    def __add__(self, other):
+        if type(other) is str:
+            other = self.__class__(null_placeholder, other)
+        return StringWithFormatting((self, other))
+
+    def __radd__(self, other):
+        if type(other) is str:
+            other = self.__class__(null_placeholder, other)
+        return StringWithFormatting((other, self))
+
     def __getattribute__(self, name):
         try:
-            return super().__getattribute__('_method_cache')[name]
+            return types.MethodType(
+                super().__getattribute__('_method_cache')[name], self)
         except KeyError:
-            attr = super().__getattribute__(name)
+            attr = getattr(str, name, None)
             if callable(attr) and not name.startswith('__'):
                 @wraps(attr)
-                def wrapped_str_method(*args, **kwargs):
-                    result = attr(*args, **kwargs)
+                def wrapped_str_method(self, *args, **kwargs):
+                    result = attr(self, *args, **kwargs)
                     if isinstance(result, list):
                         result = [
                             self.__class__(self.placeholder, s) for s in
@@ -449,28 +349,33 @@ class StringComponent(str):
                         result = self.__class__(self.placeholder, result)
                     return result
                 self._method_cache[name] = wrapped_str_method
-                return wrapped_str_method
+                return types.MethodType(wrapped_str_method, self)
             else:
-                return attr
+                return super().__getattribute__(name)
+
+    def populate(self, terminal, styles):
+        return '{}{}{}'.format(
+            terminal.normal, self.placeholder.populate(terminal, styles), self)
 
 
 class StringWithFormatting:
     '''FIXME:
     '''
     __slots__ = ['_content', '_str']
+    _method_cache = {}
 
     def __init__(self, content):
         '''FIXME:
-        :attr:`_content` is a tuple of (:class:`Placholder`, strings)
+        :attr:`_content` is a tuple of string-like objects
         '''
         if isinstance(content, self.__class__):
             self._content = content._content
         elif isinstance(content, StringComponent):
             self._content = (content,)
         elif isinstance(content, str):
-            self._content = (StringComponent(None, content),)
+            self._content = (StringComponent(null_placeholder, content),)
         else:
-            self._content = content
+            self._content = tuple(content)
         self._str = None  # FIXME: needed?
 
     def __repr__(self):
@@ -481,7 +386,7 @@ class StringWithFormatting:
         return ''.join(self._content)
 
     def __len__(self):
-        return sum(len(s.string) for s in self._content)
+        return sum(map(len, self._content))
 
     def __bool__(self):
         # We're not False, even if we only have content that isn't printable
@@ -497,10 +402,10 @@ class StringWithFormatting:
             return False
 
     def _get_new_content(self, other):
-        if isinstance(other, str):
-            return (None, (other,))
-        elif hasattr(other, '_content'):
+        if hasattr(other, '_content'):
             return other._content
+        elif isinstance(other, str):
+            return (other,)
         else:
             raise TypeError('FIXME: message')
 
@@ -512,34 +417,36 @@ class StringWithFormatting:
         new_content = self._get_new_content(other)
         return self.__class__(new_content + self._content)
 
+    def apply_placeholder(self, placeholder):
+        content = [
+            StringComponent(c.placeholder + placeholder, c) for c in
+            self._content]
+        return StringWithFormatting(content)
+
     def __iter__(self):
-        for placeholder, string in self._content:
-            for char in string:
-                yield char
+        for component in self._content:
+            yield from iter(component)
 
     def _get_slice(self, start, stop):
-        #FIXME: this is going to be broken, again, probably
         slice_start = start if start is not None else 0
         slice_stop = stop if stop is not None else len(self)
         slice_stop = min(slice_stop, len(self))
         result = []
-        sec_start = 0
-        for placeholder, strings in self._content:
+        comp_start = 0
+        for component in self._content:
             new_strings = []
-            for string in strings:
-                str_stop = str_start + len(string)
-                if str_start >= slice_start and str_stop <= slice_stop:
-                    section.append(section)
-                elif str_start < slice_start < str_stop:
-                    section.append(string[
-                        slice_start - str_start:slice_stop - str_start])
-                elif str_start < slice_stop <= str_stop:
-                    section.append(string[:slice_stop - str_start])
-                str_start = str_stop
-            result.append(placeholder, tuple(new_strings))
-            if str_stop >= slice_stop:
+            comp_stop = comp_start + len(component)
+            if comp_start >= slice_start and comp_stop <= slice_stop:
+                result.append(component)
+            elif comp_start < slice_start < comp_stop:
+                result.append(component[
+                    slice_start - comp_start:slice_stop - comp_start])
+            elif comp_start < slice_stop <= comp_stop:
+                result.append(component[:slice_stop - comp_start])
+            comp_start = comp_stop
+            if comp_stop >= slice_stop:
                 break
-        return self.__class__(tuple(result))
+        return self.__class__(result)
 
     def __getitem__(self, index):
         if isinstance(index, slice):
@@ -547,25 +454,47 @@ class StringWithFormatting:
         else:
             return str(self)[index]
 
+    def _apply_list_returning_str_method(
+            self, name, *args, reference, **kwargs):
+        new_components = []
+        for component in self._content:
+            new_components.extend(getattr(component, name)(*args, **kwargs))
+        result = []
+        for string in reference:
+            component_group = []
+            component_group_str = ''
+            while True:
+                component = new_components.pop(0)
+                if component:
+                    component_group.append(component)
+                    component_group_str += str(component)
+                    if component_group_str == string:
+                        result.append(self.__class__(component_group))
+                        break
+        return result
+
     def __getattr__(self, name):
         '''We attemt to provide access to all methods that are available on a
         regular str object, whilst wrapping up answers appropriately.
         '''
-        # FIXME: definitely broken
-        str_cls_method = getattr(str, name)
-        @wraps(str_cls_method)
-        def str_method_executor(*args, **kwargs):
-            reference = str_cls_method(str(self), *args, **kwargs)
-            if isinstance(reference, list):
-                return self._apply_str_method(
-                    name, *args, reference=reference, **kwargs)
-            elif isinstance(reference, str):
-                raise NotImplementedError(
-                    "str method {!r} has not yet been implemented for a {}, "
-                    "sorry :-(".format(name, self.__class__.__name__))
-            else:
-                return reference
-        return str_method_executor
+        try:
+            return types.MethodType(self._method_cache[name], self)
+        except KeyError:
+            str_cls_method = getattr(str, name)
+            @wraps(str_cls_method)
+            def str_method_executor(self, *args, **kwargs):
+                reference = str_cls_method(str(self), *args, **kwargs)
+                if isinstance(reference, list):
+                    return self._apply_list_returning_str_method(
+                        name, *args, reference=reference, **kwargs)
+                elif isinstance(reference, str):
+                    raise NotImplementedError(
+                        "str method {!r} has not yet been implemented for a "
+                        "{}, sorry :-(".format(name, self.__class__.__name__))
+                else:
+                    return reference
+            self._method_cache[name] = str_method_executor
+            return types.MethodType(str_method_executor, self)
 
     def chunk(self, regex):
         '''FIXME:
@@ -582,6 +511,8 @@ class StringWithFormatting:
                 if chunk1.strip() and chunk2.strip():
                     # There's no whitespace at the boundary, so stick the
                     # chunks together
+                    # FIXME: This sort of defeats the point of the regex, as we
+                    # only look at whitespace:
                     chunks[i:i + 2] = [self.__class__((chunk1, chunk2))]
                 else:
                     chunks[i] = self.__class__((chunk1,))
@@ -598,15 +529,38 @@ class StringWithFormatting:
         elif len(self._content) == 1:
             return self.__class__(self._content[0].strip())
         else:
-            first = self._content[0].lstrip()
-            last = self._content[-1].rstrip()
-            total = (first,) + self._content[1:-1] + (last,)
+            first_component = self._content[0]
+            last_component = self._content[-1]
+            total = (
+                (first_component.lstrip(),) +
+                self._content[1:-1] +
+                (last_component.rstrip(),))
             return self.__class__(total)
 
-    def populate(self, terminal=None, styles=None, esc_seq_stack=None):
+    def populate(self, terminal=None, styles=None):
+        '''Get the concrete (including terminal escape sequences)
+        representation of this string.
+
+        :parameter Terminal terminal: The terminal object to use for turning
+            formatting attributes such as :attr:`Root.format.blue` into
+            concrete escape sequences.
+        :parameter styles: An object from which to look up style definitions,
+            which ultimately resolve to escape sequences, but may resolve to
+            other intermediaries, including other styles.
+        :type styles: StylePlaceholderFactory or dict
+        :returns str: Returns a concrete string, containing all the escape
+            sequences required to render the string to the terminal with the
+            desired formatting.
+
+        .. note::
+            All parameters are optional, and will be populated with sensible
+            defaults if ommitted. This is to assist testing and experimentation
+            with lower-level parts of Junction. If you want to use a
+            :class:`StringWithFormatting` object as part of a wider
+            application, it is suggested that you always pass all the arguments
+            explicitly.
+        '''
         terminal = terminal or get_terminal()
         styles = styles or {}
-        esc_seq_stack = esc_seq_stack or EscapeSequenceStack(terminal.normal)
         return ''.join(
-            s.populate(terminal, styles, esc_seq_stack) for s in self._content)
-    #FIXME: populate.__doc__ = StringComponentSpec.populate.__doc__
+            s.populate(terminal, styles) for s in self._content)
