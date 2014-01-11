@@ -21,50 +21,6 @@ from .terminal import get_terminal
 from .util import InheritDocstrings
 
 
-class StringComponentSpec:
-    pass
-
-
-class EscapeSequenceStack:
-    '''An :class:`EscapeSequenceStack` is used to keep track of what formatting
-    escape sequences have been applied by a :class:`StringWithFormatting`
-    during the drawing process, so that we can step back and 'undo' the last
-    one when we need to go back to a previous set of formatting options.
-    '''
-    def __init__(self, default_escape_sequence):
-        '''
-        :parameter str default_escape_sequence: The escape sequence used by
-            this stack as the 'reset' command for the terminal. (Will almost
-            certainly be :attr:`jcn.Terminal.normal`.)
-        '''
-        self.default_escape_sequence = default_escape_sequence
-        self._stack = []
-
-    def push(self, esc_seq):
-        '''Push a new escapse sequence onto the stack.
-
-        :parameter str esc_seq: The terminal escape sequence to push onto the
-            stack.
-        '''
-        self._stack.append(esc_seq)
-
-    def pop(self):
-        '''Pops the last escape sequence from the stack *and returns a string
-        containing all the remaining escape sequences that should be in effect
-        on the terminal*.
-
-        .. note::
-            This method may be named poorly, suggestions for improving it would
-            be welcome.
-
-        :returns str: Returns a string of the escape sequences remaining in the
-            stack, so as effectively to 'undo' the one that has just been
-            popped off.
-        '''
-        self._stack.pop()
-        return self.default_escape_sequence + ''.join(self._stack)
-
-
 class Placeholder(metaclass=InheritDocstrings):
     '''Placeholders are objects that will provide concrete terminal escape
     sequences dynamically. At creation time they are merely
