@@ -328,12 +328,21 @@ class StringComponent(str):
         return self.__class__(self.placeholder, super().__getitem__(index))
 
     def __add__(self, other):
-        if type(other) is str:
-            other = self.__class__(null_placeholder, other)
+        # FIXME: this is messy
+        if hasattr(other, 'placeholder'):
+            if other.placeholder is self.placeholder:
+                return self.__class__(self.placeholder, str(self) + str(other))
+        elif isinstance(other, StringWithFormatting):
+            return other.__radd__(self)
+        elif isinstance(other, str):
+            if self.placeholder is null_placeholder:
+                return self.__class__(null_placeholder, str(self) + other)
+            else:
+                other = self.__class__(null_placeholder, other)
         return StringWithFormatting((self, other))
 
     def __radd__(self, other):
-        if type(other) is str:
+        if isinstance(other, str):
             other = self.__class__(null_placeholder, other)
         return StringWithFormatting((other, self))
 
@@ -407,21 +416,43 @@ class StringWithFormatting:
         else:
             return False
 
-    def _get_new_content(self, other):
-        if hasattr(other, '_content'):
-            return other._content
-        elif isinstance(other, str):
-            return (other,)
-        else:
-            raise TypeError('FIXME: message')
-
     def __add__(self, other):
-        new_content = self._get_new_content(other)
-        return self.__class__(self._content + new_content)
+        #FIXME: Tidy this mess up!
+        if hasattr(other, '_content'):
+            return self.__class__(self._content + other._content)
+        elif hasattr(other, 'placeholder'):
+            if other.placeholder is self._content[-1].placeholder:
+                new_content = self._content[:-1] + (self._content[-1] + other,)
+            else:
+                new_content = self._content + (other,)
+        else:
+            if self._content[-1].placeholder is null_placeholder:
+                new_content = (
+                    self._content[:-1] + (self._content[-1] + StringComponent(
+                        null_placeholder, other),))
+            else:
+                new_content = (
+                    self._content +
+                    (StringComponent(null_placeholder, other),))
+        return self.__class__(new_content)
 
     def __radd__(self, other):
-        new_content = self._get_new_content(other)
-        return self.__class__(new_content + self._content)
+        # FIXME: Tidy this mess up!
+        if hasattr(other, 'placeholder'):
+            if other.placeholder is self._content[0].placeholder:
+                new_content = (other + self._content[0],) + self._content[1:]
+            else:
+                new_content = (other,) + self._content
+        else:
+            if self._content[0].placeholder is null_placeholder:
+                new_content = ((
+                    StringComponent(null_placeholder, other) +
+                    self._content[0],) + self._content[1:])
+            else:
+                new_content = (
+                    (StringComponent(null_placeholder, other),) +
+                    self._content)
+        return self.__class__(new_content)
 
     def apply_placeholder(self, placeholder):
         content = [
