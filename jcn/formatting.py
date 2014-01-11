@@ -324,9 +324,9 @@ class StringComponent(str):
             else:
                 return super().__getattribute__(name)
 
-    def populate(self, terminal, styles):
+    def populate(self, terminal, styles, default_esc_seq):
         return '{}{}{}'.format(
-            terminal.normal, self.placeholder.populate(terminal, styles), self)
+            default_esc_seq, self.placeholder.populate(terminal, styles), self)
 
 
 class StringWithFormatting:
@@ -524,7 +524,7 @@ class StringWithFormatting:
                 (last_component.rstrip(),))
             return self.__class__(total)
 
-    def populate(self, terminal=None, styles=None):
+    def populate(self, terminal=None, styles=None, default_esc_seq=''):
         '''Get the concrete (including terminal escape sequences)
         representation of this string.
 
@@ -535,6 +535,7 @@ class StringWithFormatting:
             which ultimately resolve to escape sequences, but may resolve to
             other intermediaries, including other styles.
         :type styles: StylePlaceholderFactory or dict
+        :parameter str default_esc_seq: FIXME
         :returns str: Returns a concrete string, containing all the escape
             sequences required to render the string to the terminal with the
             desired formatting.
@@ -550,4 +551,5 @@ class StringWithFormatting:
         terminal = terminal or get_terminal()
         styles = styles or {}
         return ''.join(
-            s.populate(terminal, styles) for s in self._content)
+            s.populate(terminal, styles, default_esc_seq) for s in
+            self._content)

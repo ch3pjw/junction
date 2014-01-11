@@ -116,7 +116,7 @@ class TestParameterizingFormatPlaceholder(TestCase):
         result = param_fmt_placeholder.populate(self.terminal, {})
         self.assertEqual(repr(result), repr(self.terminal.color(121)))
         component = param_fmt_placeholder('important info')
-        result = component.populate(self.terminal, {})
+        result = component.populate(self.terminal, {}, self.terminal.normal)
         expected = (
             self.terminal.normal + self.terminal.color(121) + 'important info')
         self.assertEqual(repr(result), repr(expected))
@@ -190,7 +190,7 @@ class TestStringComponent(TestCase):
     def test_populate(self):
         terminal = Terminal(force_styling=True)
         s = StringComponent(FormatPlaceholder('red'), 'angry!')
-        result = s.populate(terminal, {})
+        result = s.populate(terminal, {}, terminal.normal)
         expected = terminal.normal + terminal.red + 'angry!'
         self.assertEqual(repr(result), repr(expected))
 
