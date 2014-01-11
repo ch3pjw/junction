@@ -155,6 +155,12 @@ class ParameterizingFormatPlaceholder(FormatPlaceholder):
         super().__init__(attr_name)
         self.args = None
 
+    def __repr__(self):
+        r = super().__repr__()
+        if self.args is not None:
+            r += '({})'.format(', '.join(map(repr, self.args)))
+        return r
+
     def __eq__(self, other):
         if super().__eq__(other):
             return self.args == other.args
