@@ -376,7 +376,7 @@ class StringComponent(str):
 class StringWithFormatting:
     '''FIXME:
     '''
-    __slots__ = ['_content', '_str']
+    __slots__ = ['_content']
     _method_cache = {}
 
     def __init__(self, content):
@@ -391,7 +391,6 @@ class StringWithFormatting:
             self._content = (StringComponent(null_placeholder, content),)
         else:
             self._content = tuple(content)
-        self._str = None  # FIXME: needed?
 
     def __repr__(self):
         return '{}({!r})'.format(
