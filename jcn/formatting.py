@@ -506,11 +506,6 @@ class StringWithFormatting:
                     # FIXME: This sort of defeats the point of the regex, as we
                     # only look at whitespace:
                     chunks[i:i + 2] = [self.__class__((chunk1, chunk2))]
-                else:
-                    chunks[i] = self.__class__((chunk1,))
-            else:
-                chunks[i] = self.__class__((chunk1,))
-        chunks[-1] = self.__class__((chunk2,))
         return chunks
 
     def strip(self):
