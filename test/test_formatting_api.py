@@ -167,6 +167,17 @@ class TestStringComponent(TestCase):
         expected = StringComponent('purple', 'spaced-out  world')
         self.assertEqual(result, expected)
 
+    def test_add_str(self):
+        s = StringComponent(null_placeholder, 'boring')
+        result = s + ' old string'
+        expected = StringComponent(null_placeholder, 'boring old string')
+        self.assertEqual(result, expected)
+        s = StringComponent(FormatPlaceholder('red'), 'wow')
+        result = s + ' exciting colour'
+        expected = StringWithFormatting(
+            (s, StringComponent(null_placeholder, ' exciting colour')))
+        self.assertEqual(result, expected)
+
     def test_add_string_component(self):
         s1 = StringComponent('a', 'hello')
         s2 = StringComponent('b', 'world')
