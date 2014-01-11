@@ -16,7 +16,7 @@
 from textwrap import TextWrapper as _TextWrapper
 from functools import reduce
 
-from .formatting import StringComponentSpec, StringWithFormatting
+from .formatting import StringWithFormatting
 
 
 class TextWrapper:
@@ -32,11 +32,6 @@ class TextWrapper:
 
         if isinstance(string_like, StringWithFormatting):
             chunks = string_like.chunk(regex)
-        elif isinstance(string_like, StringComponentSpec):
-            # FIXME: it's a bit naff that content could end up being of this
-            # type...
-            chunks = string_like.chunk(regex)
-            chunks = [StringWithFormatting(c) for c in chunks]
         else:
             chunks = regex.split(string_like)
             chunks = [c for c in chunks if c]

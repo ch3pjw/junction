@@ -18,7 +18,7 @@ from io import StringIO
 from mock import patch
 
 from jcn.formatting import (
-    EscapeSequenceStack, StringComponent, FormatPlaceholder,
+    StringComponent, FormatPlaceholder,
     ParameterizingFormatPlaceholder, PlaceholderGroup, StylePlaceholder,
     null_placeholder, FormatPlaceholderFactory, StylePlaceholderFactory,
     StringWithFormatting)
@@ -101,7 +101,6 @@ class TestParameterizingFormatPlaceholder(TestCase):
     def setUp(self):
         self.terminal = Terminal(force_styling=True)
         self.factory = FormatPlaceholderFactory()
-        self.stack = EscapeSequenceStack(self.terminal.normal)
 
     def test_too_many_calls(self):
         param_fmt_placeholder = self.factory.color(230)
