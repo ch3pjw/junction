@@ -18,7 +18,7 @@ from unittest import TestCase
 
 from jcn.root import Root
 from jcn.display_elements import Fill, Text, Label, ProgressBar
-from jcn.formatting import StringWithFormatting
+from jcn.formatting import null_placeholder, StringComponent
 
 
 class TestDisplayElements(TestCase):
@@ -92,8 +92,8 @@ class TestDisplayElements(TestCase):
         expected = [
             Root.format.underline('Many') + '      ',
             Root.format.underline('lines ') + 'make',
-            StringWithFormatting('muchworkfo'),
-            StringWithFormatting('rme       ')]
+            StringComponent(null_placeholder, 'muchworkfo'),
+            StringComponent(null_placeholder, 'rme       ')]
         result = text.get_all_blocks(10, 4)[0].lines
         self.assertEqual(result, expected)
 
@@ -108,8 +108,8 @@ class TestDisplayElements(TestCase):
             ('fox ' + Root.format.underline('jumps') + '        '),
             '                 ',
             '                 ']
-        actual = text.get_all_blocks(17, 4)[0].lines
-        self.assertEqual(actual, expected)
+        result = text.get_all_blocks(17, 4)[0].lines
+        self.assertEqual(result, expected)
 
     def test_label(self):
         label = Label('LHR')

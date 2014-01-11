@@ -199,34 +199,6 @@ class TestStringWithFormatting(TestCase):
     def setUp(self):
         self.format = FormatPlaceholderFactory()
         self.style = StylePlaceholderFactory()
-        self.swf = 'Hello ' + self.format.blue(self.format.underline('World!'))
-        self.terminal = Terminal(force_styling=True)
-
-    def test_end_to_end(self):
-        self.terminal.stream = StringIO()
-        text = Text(self.swf)
-        text.draw(6, 2, terminal=self.terminal)
-        result = self.terminal.stream.getvalue()
-        expected = (
-            self.terminal.normal + self.terminal.move(0, 0) + 'Hello ' +
-            self.terminal.move(1, 0) + self.terminal.blue +
-            self.terminal.underline + 'World!' + self.terminal.normal +
-            self.terminal.blue + self.terminal.normal)
-        self.assertEqual(repr(result), repr(expected))
-        self.terminal.stream = StringIO()
-        text.content = 'Plainly formatted info'
-        text.update(terminal=self.terminal)
-        result = self.terminal.stream.getvalue()
-        expected = (
-            self.terminal.normal + self.terminal.move(0, 0) + 'Plainl' +
-            self.terminal.move(1, 0) + 'y form')
-        self.assertEqual(repr(result), repr(expected))
-
-
-class NewTestStringWithFormatting(TestCase):
-    def setUp(self):
-        self.format = FormatPlaceholderFactory()
-        self.style = StylePlaceholderFactory()
         self.terminal = Terminal(force_styling=True)
 
     def test_init(self):
@@ -281,9 +253,6 @@ class NewTestStringWithFormatting(TestCase):
         self.assertEqual(swf[3:100], expected)
         self.assertEqual(swf[3:len(swf)], expected)
         expected = 'o ' + self.format.blue(self.format.underline('Wor'))
-        print(repr(swf[4:9]))
-        print('-' * 20)
-        print(repr(expected))
         self.assertEqual(swf[4:9], expected)
         expected = StringWithFormatting('llo')
         self.assertEqual(swf[2:5], expected)
@@ -313,15 +282,15 @@ class NewTestStringWithFormatting(TestCase):
         s = StringWithFormatting(content)
         result = s.chunk(_TextWrapper.wordsep_re)
         expected = [
-            StringWithFormatting(StringComponent('blue', 'This')),
-            StringWithFormatting(StringComponent('blue', ' ')),
-            StringWithFormatting(StringComponent('blue', 'is')),
-            StringWithFormatting(StringComponent('blue', ' ')),
+            StringComponent('blue', 'This'),
+            StringComponent('blue', ' '),
+            StringComponent('blue', 'is'),
+            StringComponent('blue', ' '),
             StringWithFormatting((
                 StringComponent('blue', 'so'),
                 StringComponent('red', 'me'))),
-            StringWithFormatting(StringComponent('red', ' ')),
-            StringWithFormatting(StringComponent('red', 'text'))]
+            StringComponent('red', ' '),
+            StringComponent('red', 'text')]
         self.assertEqual(result, expected)
 
     def test_splitlines(self):
@@ -356,7 +325,7 @@ class NewTestStringWithFormatting(TestCase):
             self.terminal.normal + self.terminal.bold + 'hello ' +
             self.terminal.normal + self.terminal.green + self.terminal.reverse
             + 'wor' + self.terminal.normal + self.terminal.reverse + 'ld')
-        result = swf.populate(self.terminal, self.style)
+        result = swf.populate(self.terminal, self.style, self.terminal.normal)
         self.assertEqual(repr(result), repr(expected))
 
     @patch('jcn.formatting.get_terminal')
@@ -365,9 +334,28 @@ class NewTestStringWithFormatting(TestCase):
         swf = 'Hello ' + self.format.blue(self.format.underline('World!'))
         result = swf.populate()
         expected = (
-            self.terminal.normal + 'Hello ' + self.terminal.normal +
-            self.terminal.underline + self.terminal.blue + 'World!')
+            'Hello ' + self.terminal.underline + self.terminal.blue + 'World!')
         self.assertIsInstance(result, str)
+        self.assertEqual(repr(result), repr(expected))
+
+    def test_end_to_end(self):
+        swf = 'Hello ' + self.format.blue(self.format.underline('World!'))
+        self.terminal.stream = StringIO()
+        text = Text(swf)
+        text.draw(6, 2, terminal=self.terminal)
+        result = self.terminal.stream.getvalue()
+        expected = (
+            self.terminal.move(0, 0) + self.terminal.normal + 'Hello ' +
+            self.terminal.move(1, 0) + self.terminal.normal +
+            self.terminal.underline + self.terminal.blue + 'World!')
+        self.assertEqual(repr(result), repr(expected))
+        self.terminal.stream = StringIO()
+        text.content = 'Plainly formatted info'
+        text.update(terminal=self.terminal)
+        result = self.terminal.stream.getvalue()
+        expected = (
+            self.terminal.move(0, 0) + self.terminal.normal + 'Plainl' +
+            self.terminal.move(1, 0) + self.terminal.normal + 'y form')
         self.assertEqual(repr(result), repr(expected))
 
 
@@ -383,18 +371,18 @@ class TestDefaultFormatting(TestCase):
         fill.draw(3, 1, terminal=self.terminal)
         result = self.terminal.stream.getvalue()
         expected = (
-            self.terminal.normal + self.terminal.bold + self.terminal.green +
-            self.terminal.underline + self.terminal.move(0, 0) + '...' +
-            self.terminal.normal)
+            self.terminal.move(0, 0) + self.terminal.normal +
+            self.terminal.bold + self.terminal.green +
+            self.terminal.underline + '...')
         self.assertEqual(repr(result), repr(expected))
 
     def test_default_formatting_with_other_formatting(self):
-        text = Text(self.format.underline('content'))
+        text = Text(self.format.underline('content') + ' you know')
         text.default_format = self.format.blue
-        text.draw(7, 1, terminal=self.terminal)
+        text.draw(16, 1, terminal=self.terminal)
         result = self.terminal.stream.getvalue()
         expected = (
-            self.terminal.normal + self.terminal.blue +
-            self.terminal.move(0, 0) + self.terminal.underline + 'content' +
-            self.terminal.normal + self.terminal.blue + self.terminal.normal)
+            self.terminal.move(0, 0) + self.terminal.normal +
+            self.terminal.blue + self.terminal.underline + 'content' +
+            self.terminal.normal + self.terminal.blue + ' you know')
         self.assertEqual(repr(result), repr(expected))
