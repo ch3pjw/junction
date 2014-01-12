@@ -26,9 +26,9 @@ class Placeholder(metaclass=InheritDocstrings):
     sequences dynamically. At creation time they are merely
     given a name as a reference to use at draw-time, when their
     :meth:`Placeholder.populate` method will be called with current
-    escape-sequence-providing objects. These objects are also provided by the
-    :attr:`Root.format` and :attr:`Root.style` factories as the entry point to
-    their formatting and style definition.
+    escape-sequence-providing objects. :class:`Placeholder` objects are
+    produced by the :attr:`Root.format` and :attr:`Root.style` factories as the
+    entry point for formatting and styling for the user.
     '''
     __slots__ = ['attr_name']
 
@@ -51,6 +51,8 @@ class Placeholder(metaclass=InheritDocstrings):
             return False
 
     def __add__(self, other):
+        '''FIXME:
+        '''
         if isinstance(other, Placeholder):
             return PlaceholderGroup((self, other))
         else:
@@ -66,10 +68,15 @@ class Placeholder(metaclass=InheritDocstrings):
 
         :parameter content: The content the Junction is to format with this
             object's formatting.
-        :type content: :class:`str`, :class:`StringComponentSpec` or
+        :type content: :class:`str`, :class:`StringComponent` or
             :class:`StringWithFormatting`
-        :returns: A :class:`StringComponentSpec` object referencing both the
-            given content and this :class:`Placeholder` instance.
+        :returns: Either a :class:`StringComponent` object referencing both the
+            given content and this :class:`Placeholder` instance, or, in the
+            case where we were called with a :class:`StringWithFormatting`
+            object, a :class:`StringWithFormatting` object that has had this
+            objects placeholder appended to each of its components'
+            placeholders.
+        :return type: :class:`StringComponent` or :class:`StringWithFormatting`
         '''
         if isinstance(content, StringComponent):
             return StringComponent(content.placeholder + self, content)
@@ -79,7 +86,10 @@ class Placeholder(metaclass=InheritDocstrings):
             return StringComponent(self, content)
 
     def populate(self, terminal, styles):
-        '''
+        '''Get a concrete representation of this placeholder by looking up it's
+        :attr:`attr_name` on the appropriate :class:`jcn.Terminal` or
+        :class:`StylePlaceholderFactory` objects.
+
         :parameter Terminal terminal: A :class:`jcn.Terminal` object from which
             to retrieve format escape sequences by attribute lookup.
         :parameter StylePlaceholderFactory styles: A
@@ -88,6 +98,8 @@ class Placeholder(metaclass=InheritDocstrings):
             :class:`Placeholder` objects represent a semantically meaningful
             set of formatting and can be recursively resolved to concrete
             escape sequences.
+        :returns str: A concrete escape sequence that this placeholder
+            represents.
         '''
         raise NotImplementedError()
 
@@ -126,15 +138,31 @@ class ParameterizingFormatPlaceholder(FormatPlaceholder):
     def _protect_from_not_called(self):
         if not self.args:
             raise ValueError(
-                "FIXME: improve message. You can't use me anywhere yet, "
-                "because I don't refer to any concrete information.")
+                "{!r} cannot be used yet, because it must first be called "
+                "with arguments so that it can actually resolve to a concrete "
+                "escape sequence. Please call it with arguments like "
+                "`Root.format.color(121)('content')".format(self))
 
     def __add__(self, other):
         self._protect_from_not_called()
         return super().__add__(other)
 
     def __call__(self, *args):
-        '''FIXME:
+        '''The first call to a :class:`ParameterizingFormatPlaceholder` will
+        set its :attr:`args` attribute to the called value(s). Subsequent calls
+        will set the content of the object as normal. Thus, one may write
+        something like::
+
+            Root.format.color(121)('content')
+
+        to produce a :class:`StringComponent` object with a colour value of
+        ``121`` and a the content ``'content'``.
+
+        :returns: Either a placeholder with the arguments assigned (first call)
+            or the result from calling a standard :class:`FormatPlaceholder`
+            (once the arguments have been assigned).
+        :return type: :class:`ParameterizingFormatPlaceholder`,
+            :class:`StringComponent` of :class:`StringWithFormatting`
         '''
         if not self.args:
             self.args = args
@@ -148,7 +176,10 @@ class ParameterizingFormatPlaceholder(FormatPlaceholder):
 
 
 class StylePlaceholder(Placeholder):
-    '''FIXME:
+    '''A :class:`StylePlaceholder` references a user-defined collection of
+    :class:`jcn.Terminal` escape sequence attributes or other user-defined
+    :class:`StylePlaceholder` objects, enabling the user to make dynamic
+    heirarchical style definitions for their applications.
     '''
     def populate(self, terminal, styles):
         style = styles[self.attr_name]
@@ -156,10 +187,19 @@ class StylePlaceholder(Placeholder):
 
 
 class NullPlaceholder(Placeholder):
-    '''FIXME: reference :attr:`null_placeholder`
+    '''A :class:`NullPlaceholder` object is used in :class:`StringComponent`
+    objects that essentially have no specific formatting of their own. That is,
+    we want the :class:`StringComponent` to act like a regular string, but have
+    the same API as a formatted :class:`StringComponent` for consistency.
+
+    We provide a :attr:`jcn.null_placeholder` singleton for convenience when
+    producing 'unformatted' :class:`StringComponent` objects internally, which
+    also speeds up comparison.
     '''
     def __init__(self):
-        '''FIXME:
+        '''Unlike other :class:`Placeholder`-derived objects,
+        :class:`NullPlaceholder` does not take any construction arguments,
+        becuase it refers to no attributes.
         '''
         super().__init__('')
 
@@ -173,9 +213,16 @@ null_placeholder = NullPlaceholder()
 
 
 class PlaceholderGroup:
-    '''FIXME:
+    '''A :class:`PlaceholderGroup` object is a container that references a
+    collection of :class:`Placeholder` objects, and returns the concatenation
+    of their escape sequence representations when
+    :meth:`PlaceholderGroup.populate` is called.
     '''
     def __init__(self, placeholders=None):
+        '''
+        :parameter iterable placeholders: An iterable containing the
+            placeholders to be contained within the :class:`PlaceholderGroup`.
+        '''
         if isinstance(placeholders, self.__class__):
             placeholders = placeholders.placeholders
         self.placeholders = tuple(placeholders) if placeholders else tuple()
