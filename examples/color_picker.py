@@ -21,6 +21,7 @@ for i in range(255):
 color_content = Root.format.reverse(color_content)
 
 text = Text(color_content)
+text.wrap = False
 root = Root(text)
 for i in range(100):
     root.draw()
