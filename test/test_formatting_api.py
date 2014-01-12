@@ -23,7 +23,7 @@ from jcn.formatting import (
     null_placeholder, FormatPlaceholderFactory, StylePlaceholderFactory,
     StringWithFormatting)
 from jcn.textwrap import _TextWrapper
-from jcn import Terminal, Text, Fill
+from jcn import Terminal, Text, Fill, Label, Stack
 
 
 class TestPlaceholder(TestCase):
@@ -385,4 +385,19 @@ class TestDefaultFormatting(TestCase):
             self.terminal.move(0, 0) + self.terminal.normal +
             self.terminal.blue + self.terminal.underline + 'content' +
             self.terminal.normal + self.terminal.blue + ' you know')
+        self.assertEqual(repr(result), repr(expected))
+
+    def test_nested_default_formats(self):
+        label1 = Label('label1')
+        label2 = Label('label2')
+        label2.default_format = self.format.reverse
+        stack = Stack(label1, label2)
+        stack.default_format = self.format.green
+        stack.draw(6, 2, terminal=self.terminal)
+        result = self.terminal.stream.getvalue()
+        expected = (
+            self.terminal.move(0, 0) + self.terminal.normal +
+            self.terminal.green + 'label1' + self.terminal.move(1, 0) +
+            self.terminal.normal + self.terminal.green +
+            self.terminal.reverse + 'label2')
         self.assertEqual(repr(result), repr(expected))
