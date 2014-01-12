@@ -75,7 +75,7 @@ class Fill(ABCDisplayElement):
 
 
 class Text(ABCDisplayElement):
-    def __init__(self, content, *args, **kwargs):
+    def __init__(self, content='', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._content = content
         self.wrap = True
@@ -88,6 +88,8 @@ class Text(ABCDisplayElement):
     def content(self, value):
         self._content = value
         self.updated = True
+        if self.root:
+            self.root.update()
 
     def _get_lines(self, width, height):
         unwrapped_lines = self.content.splitlines()
@@ -101,6 +103,8 @@ class Text(ABCDisplayElement):
 
 
 class Label(Text):
+    min_height = max_height = 1
+
     def _get_lines(self, width, height):
         return [self.content]
 
@@ -111,6 +115,7 @@ class ProgressBar(ABCDisplayElement):
     max_height = 1
 
     def __init__(self, chars=None):
+        super().__init__()
         if not chars or len(chars) < 4:
             chars = '[ -=]'
         self._start_cap = chars[0]
@@ -127,6 +132,8 @@ class ProgressBar(ABCDisplayElement):
     def fraction(self, value):
         self._fraction = clamp(value, 0, 1)
         self.updated = True
+        if self.root:
+            self.root.update()
 
     def _get_lines(self, width, height):
         width = max(width, self.min_width) - 2

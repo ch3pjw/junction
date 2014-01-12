@@ -22,8 +22,10 @@ class LineBuffer:
     # Yes, the irony of re-implementing a bunch of stuff we've gone out of way
     # to turn off in the terminal is not lost on me ;-)
     def __init__(self):
-        self.content = ''
+        self._content = ''
         self.cursor_position = 0
+        self.content_updated_callback = None
+        self.line_received_callback = None
 
     def __bool__(self):
         return bool(self.content)
@@ -33,6 +35,16 @@ class LineBuffer:
 
     def __str__(self):
         return self.content
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = value
+        if self.content_updated_callback:
+            self.content_updated_callback(self._content)
 
     def draw(self):
         # FIXME: Might want to reconsider how we do formatting so that the
@@ -48,6 +60,7 @@ class LineBuffer:
 
     def clear(self):
         self.content = ''
+        self.cursor_position = 0
 
     def handle_input(self, data):
         if len(data) == 1:
@@ -66,6 +79,10 @@ class LineBuffer:
             self.cursor_position = 0
         elif data == 'end':
             self.cursor_position = len(self.content)
+        elif data == 'return':
+            self._line_received()
+        else:
+            return data
 
     def _insert_char(self, char):
         pos = self.cursor_position
@@ -91,9 +108,14 @@ class LineBuffer:
         self.cursor_position = clamp(
             self.cursor_position + delta, min_=0, max_=len(self))
 
+    def _line_received(self):
+        if self.line_received_callback:
+            self.line_received_callback(self.content)
+        self.clear()
+
 
 class Input(Text):
-    # I'm not sure I'm liking the contstraints that the interrelationship of
+    # I'm not sure I'm liking the constraints that the interrelationship of
     # Text and Input imposes...
     def __init__(self, placeholder_text, *args, **kwargs):
         super().__init__(content=LineBuffer(), *args, **kwargs)
@@ -117,16 +139,35 @@ class Input(Text):
 
 
 class LineInput(ABCDisplayElement):
+    min_height = max_height = 1
+
     def __init__(self, placeholder_text, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.placeholder_text = placeholder_text
         self.line_buffer = LineBuffer()
 
+    @property
+    def content_updated_callback(self):
+        return self.line_buffer.content_updated_callback
+
+    @content_updated_callback.setter
+    def content_updated_callback(self, callback):
+        self.line_buffer.content_updated_callback = callback
+
+    @property
+    def line_received_callback(self):
+        return self.line_buffer.line_received_callback
+
+    @line_received_callback.setter
+    def line_received_callback(self, callback):
+        self.line_buffer.line_received_callback = callback
+
     def handle_input(self, data):
-        self.line_buffer.handle_input(data)
+        result = self.line_buffer.handle_input(data)
         self.updated = True
         # FIXME: this is a temporary hack to try proof of concept
         self.root.update()
+        return result
 
     def _get_lines(self, width, height):
         if self.line_buffer:

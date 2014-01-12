@@ -13,23 +13,43 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
 
-from abc import abstractmethod
+from abc import abstractmethod, abstractproperty
 
 from .base import ABCUIElement, Block
+from .util import weighted_round_robin
 
 
 class ABCContainerElement(ABCUIElement):
     def __init__(self, *elements, **kwargs):
         self._content = []
-        self._active_element = None
+        self.active_element = None
+        self._root = None
+        self._updated = True
         super().__init__(**kwargs)
         for element in elements:
             self.add_element(element)
-        self._root = None
-        self._updated = True
 
     def __iter__(self):
         return iter(self._content)
+
+    def __len__(self):
+        return len(self._content)
+
+    def __contains__(self, element):
+        return element in self._content
+
+    def __getitem__(self, index):
+        return self._content[index]
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = value
+        if self.root:
+            self.root.draw()
 
     @property
     def root(self):
@@ -48,6 +68,8 @@ class ABCContainerElement(ABCUIElement):
     @updated.setter
     def updated(self, value):
         self._updated = value
+        if value and self.root:
+            self.root.update()
 
     @abstractmethod
     def _get_elements_and_parameters(
@@ -58,18 +80,31 @@ class ABCContainerElement(ABCUIElement):
 
     def add_element(self, element):
         self._content.append(element)
-        self._active_element = element
+        if self.active_element is None:
+            self.active_element = element
         element.root = self.root
+        if self.root:
+            self.root.draw()
 
     def remove_element(self, element):
         self._content.remove(element)
-        if element is self._active_element:
-            self._active_element = None
+        if element is self.active_element:
+            self.active_element = None
+        self.updated = True
+
+    def replace_element(self, old_element, new_element):
+        i = self._content.index(old_element)
+        self._content[i] = new_element
+        if old_element is self.active_element:
+            self.active_element = new_element
+        new_element.root = self.root
+        if self.root:
+            self.root.draw()
 
     def _get_all_blocks(
             self, width, height, x=0, y=0, x_crop=None, y_crop=None,
             default_format=None):
-        blocks = []
+        blocks = [Block(x, y, [' ' * width] * height, default_format)]
         x_crop = x_crop or self._halign
         y_crop = y_crop or self._valign
         for element, width, height, x, y, default_format in (
@@ -85,6 +120,12 @@ class ABCContainerElement(ABCUIElement):
         for element in self:
             blocks.extend(element.get_updated_blocks(default_format))
         return blocks
+
+    def handle_input(self, data):
+        if self.active_element:
+            return self.active_element.handle_input(data)
+        else:
+            return data
 
 
 class Box(ABCContainerElement):
@@ -125,16 +166,16 @@ class Box(ABCContainerElement):
 
     @property
     def max_width(self):
-        return self._active_element.max_width + 2
+        return self.active_element.max_width + 2
 
     @property
     def max_height(self):
-        return self._active_element.max_height + 2
+        return self.active_element.max_height + 2
 
     def _get_elements_and_parameters(
             self, width, height, x, y, default_format):
         yield (
-            self._active_element, width - 2, height - 2, x + 1, y + 1,
+            self.active_element, width - 2, height - 2, x + 1, y + 1,
             default_format)
 
     def _get_all_blocks(self, width, height, x=0, y=0, *args, **kwargs):
@@ -219,3 +260,134 @@ class Zebra(Stack):
                 else:
                     default_format = zebra_format
             yield element, width, height, x, y, default_format
+
+
+class SplitContainerItemInfo:
+    def __init__(self, element, weight, size):
+        self.element = element
+        self.weight = weight
+        self.size = size
+        # FIXME: This is a bit of a nasty hack to help the container:
+        self._round_robin_additions_to_ignore = size
+
+
+class SplitContainer(ABCContainerElement):
+    _dimension = abstractproperty()
+
+    def __init__(self, *elements, **kwargs):
+        self._weights = []
+        super().__init__(*elements, **kwargs)
+        self._min_width = None
+        self._max_width = None
+        self._min_height = None
+        self._max_height = None
+
+    def add_element(self, element, weight=1):
+        self._weights.append(weight)
+        super().add_element(element)
+
+    def remove_element(self, element):
+        index = self._content.index(element)
+        del self._weights[index]
+        super().remove_element(element)
+
+    def get_min_size(self, dimension):
+        override_min = getattr(self, '_min_' + dimension)
+        if override_min:
+            return override_min
+        mins = [
+            e.get_min_size(dimension) for e in self if
+            e.get_min_size(dimension) is not None]
+        if dimension == self._dimension:
+            return sum(mins)
+        else:
+            return max(mins)
+
+    @property
+    def min_width(self):
+        return self.get_min_size('width')
+
+    @min_width.setter
+    def min_width(self, value):
+        self._min_width = value
+
+    @property
+    def min_height(self):
+        return self.get_min_size('height')
+
+    @min_height.setter
+    def min_height(self, value):
+        self._min_height = value
+
+    def get_max_size(self, dimension):
+        override_max = getattr(self, '_max_' + dimension)
+        if override_max:
+            return override_max
+        maxs = [e.get_max_size(dimension) for e in self]
+        if None in maxs:
+            return
+        if dimension == self._dimension:
+            return sum(maxs)
+        else:
+            return max(maxs)
+
+    @property
+    def max_width(self):
+        return self.get_max_size('width')
+
+    @max_width.setter
+    def max_width(self, value):
+        self._max_width = value
+
+    @property
+    def max_height(self):
+        return self.get_max_size('height')
+
+    @max_height.setter
+    def max_height(self, value):
+        self._max_height = value
+
+    def _calculate_element_sizes(self, size):
+        allocated_size = 0
+        item_infos = []
+        weighted_items = []
+        for element, weight in zip(self, self._weights):
+            min_size = element.get_min_size(self._dimension) or 0
+            item = SplitContainerItemInfo(element, weight, min_size)
+            allocated_size += min_size
+            item_infos.append(item)
+            weighted_items.append((item, weight))
+        for item in weighted_round_robin(weighted_items):
+            if allocated_size >= size:
+                break
+            size_constraint = item.element.get_max_size(self._dimension)
+            if size_constraint is None or item.size < size_constraint:
+                if item._round_robin_additions_to_ignore:
+                    item._round_robin_additions_to_ignore -= 1
+                else:
+                    item.size += 1
+                    allocated_size += 1
+        return [(item.element, item.size) for item in item_infos]
+
+    def _get_elements_and_parameters(
+            self, width, height, x, y, default_format):
+        size = height if self._dimension == 'height' else width
+        processed_size = 0
+        for element, size in self._calculate_element_sizes(size):
+            if self._dimension == 'height':
+                yield (
+                    element, width, size, x, y + processed_size,
+                    default_format)
+            else:
+                yield (
+                    element, size, height, x + processed_size, y,
+                    default_format)
+            processed_size += size
+
+
+class HorizontalSplitContainer(SplitContainer):
+    _dimension = 'height'
+
+
+class VerticalSplitContainer(SplitContainer):
+    _dimension = 'width'

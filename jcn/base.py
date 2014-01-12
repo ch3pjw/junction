@@ -122,6 +122,18 @@ class ABCUIElement(metaclass=ABCMeta):
         self._set_align('vertical', value)
         self.updated = True
 
+    def get_min_size(self, dimension):
+        if dimension == 'width':
+            return self.min_width
+        else:
+            return self.min_height
+
+    def get_max_size(self, dimension):
+        if dimension == 'width':
+            return self.max_width
+        else:
+            return self.max_height
+
     @property
     def default_format(self):
         return self._default_format
@@ -208,4 +220,5 @@ class ABCUIElement(metaclass=ABCMeta):
 
     #@abstractmethod
     def handle_input(self, data):
-        print('woo', data)
+        #print('{!r} got {!r}'.format(self, data))
+        return data
