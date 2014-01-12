@@ -97,10 +97,38 @@ class TestPlaceholder(TestCase):
             self.format.yellow + 'fail'
 
 
+class TestPlaceholderGroup(TestCase):
+    def setUp(self):
+        self.format = FormatPlaceholderFactory()
+
+    def test_call(self):
+        placeholder_group = self.format.red + self.format.underline
+        result = placeholder_group('stuff')
+        expected = StringComponent(PlaceholderGroup([
+            self.format.red, self.format.underline]), 'stuff')
+        self.assertEqual(result, expected)
+
+
 class TestParameterizingFormatPlaceholder(TestCase):
     def setUp(self):
         self.terminal = Terminal(force_styling=True)
         self.factory = FormatPlaceholderFactory()
+
+    def test_repr(self):
+        placeholder = self.factory.color
+        self.assertIn('ParameterizingFormatPlaceholder', repr(placeholder))
+        self.assertIn('color', repr(placeholder))
+        self.assertNotIn('121', repr(placeholder))
+        placeholder(121)
+        self.assertIn('ParameterizingFormatPlaceholder', repr(placeholder))
+        self.assertIn('color', repr(placeholder))
+        self.assertIn('121', repr(placeholder))
+
+    def test_eq(self):
+        placeholder = self.factory.color
+        self.assertEqual(placeholder, self.factory.color)
+        self.assertNotEqual(placeholder, self.factory.color(121))
+        self.assertNotEqual(placeholder, self.factory.red)
 
     def test_too_many_calls(self):
         param_fmt_placeholder = self.factory.color(230)
@@ -120,6 +148,21 @@ class TestParameterizingFormatPlaceholder(TestCase):
         expected = (
             self.terminal.normal + self.terminal.color(121) + 'important info')
         self.assertEqual(repr(result), repr(expected))
+
+
+class TestStylePlaceholderFactory(TestCase):
+    def setUp(self):
+        self.format = FormatPlaceholderFactory()
+        self.style = StylePlaceholderFactory()
+
+    def test_setattr(self):
+        with self.assertRaises(KeyError):
+            self.style['test']
+        self.style.test = self.format.test
+        self.assertEqual(self.style['test'], self.format.test)
+        self.style.test = None
+        with self.assertRaises(KeyError):
+            self.style['test']
 
 
 class TestStringComponent(TestCase):
@@ -219,6 +262,12 @@ class TestStringWithFormatting(TestCase):
                 null_placeholder, 'one'), StringComponent('foo', 'two'))
         swf = StringWithFormatting(content)
         self.assertEqual(swf._content, content)
+
+    def test_repr(self):
+        s = StringWithFormatting('Hello')
+        self.assertIn('StringWithFormatting', repr(s))
+        self.assertIn(
+            repr(StringComponent(null_placeholder, 'Hello')), repr(s))
 
     def test_len(self):
         s = StringWithFormatting(('hello'))
