@@ -292,6 +292,17 @@ class TestStringWithFormatting(TestCase):
         s = StringWithFormatting((StringComponent('red', ' '),))
         self.assertTrue(s)
 
+    def test_add(self):
+        s1 = self.format.red('hello') + ' world'
+        s2 = self.format.blue('stuff is') + ' cool'
+        result = s1 + s2
+        expected = StringWithFormatting((
+            StringComponent(self.format.red, 'hello'),
+            StringComponent(null_placeholder, ' world'),
+            StringComponent(self.format.blue, 'stuff is'),
+            StringComponent(null_placeholder, ' cool')))
+        self.assertEqual(result, expected)
+
     def test_contains(self):
         s = 'Perhaps ' + self.format.red('chocolate')
         self.assertIn('aps choc', s)
@@ -376,6 +387,9 @@ class TestStringWithFormatting(TestCase):
             StringComponent('blue', 'hello '),
             StringComponent('red', 'world')))
         self.assertEqual(result, expected)
+        s = StringWithFormatting(tuple())
+        result = s.strip()
+        self.assertEqual(result, s)
 
     def test_nested_formats(self):
         swf = self.format.bold('hello ') + self.format.reverse(
