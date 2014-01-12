@@ -410,8 +410,7 @@ class StringWithFormatting:
         return sum(map(len, self._content))
 
     def __bool__(self):
-        # We're not False, even if we only have content that isn't printable
-        return bool(self._content)
+        return bool(str(self))
 
     def __contains__(self, string):
             return string in str(self)

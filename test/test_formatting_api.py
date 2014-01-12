@@ -282,6 +282,16 @@ class TestStringWithFormatting(TestCase):
         s = 'I love ' + self.format.yellow('cheese')
         self.assertEqual(str(s), 'I love cheese')
 
+    def test_bool(self):
+        s = StringWithFormatting('')
+        self.assertFalse(s)
+        s = StringWithFormatting((StringComponent('red', ''),))
+        self.assertFalse(s)
+        s = StringWithFormatting(' ')
+        self.assertTrue(s)
+        s = StringWithFormatting((StringComponent('red', ' '),))
+        self.assertTrue(s)
+
     def test_contains(self):
         s = 'Perhaps ' + self.format.red('chocolate')
         self.assertIn('aps choc', s)
