@@ -82,7 +82,7 @@ class Placeholder(metaclass=InheritDocstrings):
         '''
         :parameter Terminal terminal: A :class:`jcn.Terminal` object from which
             to retrieve format escape sequences by attribute lookup.
-        :parameter StylePlacholderFactory styles: A
+        :parameter StylePlaceholderFactory styles: A
             :class:`StylePlaceholderFactory` object from which to look up
             other :class:`Placeholder` objects by name. These referenced
             :class:`Placeholder` objects represent a semantically meaningful
