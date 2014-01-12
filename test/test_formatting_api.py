@@ -401,3 +401,9 @@ class TestDefaultFormatting(TestCase):
             self.terminal.normal + self.terminal.green +
             self.terminal.reverse + 'label2')
         self.assertEqual(repr(result), repr(expected))
+        self.terminal.stream = StringIO()
+        label1.updated = True
+        label2.updated = True
+        stack.update(terminal=self.terminal)
+        result = self.terminal.stream.getvalue()
+        self.assertEqual(repr(result), repr(expected))
