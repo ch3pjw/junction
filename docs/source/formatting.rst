@@ -57,17 +57,21 @@ behaviour and restrictions of which you need to be aware:
    the content that you want to be formatted. Using the format attributes like
    raw escape sequence strings doesn't work in Junction, for reasons that we'll
    come onto later. If you want to apply multiple formats, you should nest your
-   calls, like ``Root.format.bold(Root.format.underline('Title'))``.
+   calls, like ``Root.format.bold(Root.format.underline('Title'))``, or perform
+   the addition of your formats explicitly before calling them on content:
+   ``(Root.format.bold + Root.format.underline)('Title')``. The former is
+   clearer.
 #. The result of the content concatenation in the example is a special object
    of type :class:`StringWithFormatting`. This object behaves as closely as
    possible to a normal :class:`str`, but preserves the content 'markup' that
    was supplied at creation time.
 #. Unlike strings merely containing raw escape sequences,
    :class:`StringWithFormatting` objects are smart when it comes to calculating
-   laytout. For example, they can be included inside other objects which have
-   redefined what 'normal' formatting means - so whenever your new string would
-   revert to the terminal's default format, it instead reverts to whatever it's
-   parent wants normal to look like.
+   laytout. For example, they are word-wrappable because the implicit escape
+   sequences don't contribute any length. They can also be included inside
+   other objects which have redefined what 'normal' formatting means - so
+   whenever your new string would revert to the terminal's default format, it
+   instead reverts to whatever it's parent wants normal to look like.
 
 
 Styling API
@@ -111,18 +115,21 @@ Placeholders
 
 The most basic building block of our formatting logic is the
 :class:`Placeholder`. A :class:`Placeholder` is literally used in a
-:class:`StringWithFormatting` in place of a real escape sequence value. This is
-important, because our application content can be defined independently of when
-it is drawn to the screen. (Imagine the case where someone changes the look of
-a 'heading' mid-application.)
+:class:`StringWithFormatting` *in place* of a real escape sequence value. This
+is important, because our application content can be defined independently of
+when it is drawn to the screen. (Imagine the case where someone changes the
+look of a 'heading' mid-application.)
 
-We define three different types of :class:`Placeholder`:
-:class:`FormatPlaceholer`, :class:`ParameterizingFormatPlaceholder` and
-:class:`StylePlaceholder` for referencing formats, formats that take arguments
-(such as :attr:`Root.color`) and styles respectively. We also define a fourth
-class :class:`PlaceholderGroup`, which acts similarly to :class:`Placholder`,
-but is a container for multiple placholders.  :class:`Placholder` objects are
-combined by addition to form :class:`PlaceholderGroup` objects.
+We define four different types of :class:`Placeholder`:
+:class:`FormatPlaceholer`, :class:`ParameterizingFormatPlaceholder`,
+:class:`NullPlaceholder` (which is available as the singleton
+:attr:`jcn.null_placeholder`) and :class:`StylePlaceholder`. These placeholders
+reference formats, formats that take arguments (such as :attr:`Root.color`),
+the 'unformatted' or 'normal' format, and styles respectively. We also define a
+fifth class, :class:`PlaceholderGroup`, which acts similarly to
+:class:`Placholder`, but is a container for multiple placholders.
+:class:`Placholder` objects are combined by addition to form
+:class:`PlaceholderGroup` objects.
 
 Instances of :class:`Placholder` are generated for the user by
 :class:`FormatPlaceholderFactory` and :class:`StylePlaceholderFactory`, which
@@ -148,45 +155,45 @@ Strings with formatting
 -----------------------
 
 Where :class:`Placeholder` objects were the most-basic of our formatting
-constructs, at the other end of the level-of-complexity spectrum with have
+constructs, at the other end of the spectrum we have
 :class:`StringWithFormatting`. This class endeavours to be everything a string
 can be, with the added bonus of being able to attach formatting information to
 arbitrary portions of the string. Inevitably this means there is a little bit
-of magic going on!
+of magic going on behind the scenes!
 
 At a fundamental level, :class:`StringWithFormatting` is a simple container for
 chunks of string which each have a single format. The
 :meth:`StringWithFormatting.populate` method, analgous to
-:class:`Placeholder.populate` does this for the entire string. Because a
-:class:`StringWithFormatting` is essentially a list of component strings, any
-:class:`str` methods which get applied to a :class:`StringWithFormatting` need
-to be applied over the whole list of string components, which can complicate
-matters somewhat. For example, :meth:`str.stip` should only affect each end of
-a :class:`str`, so :class:`StringWithFormatting` has to careful no to apply
-:meth:`str.strip` equally every single one of its components.
+:class:`Placeholder.populate`, traverses the contents of the
+:class:`StringWithFormatting` object and populates each portion of the string
+in turn.
+
+Because a :class:`StringWithFormatting` is essentially a list of component
+strings, any :class:`str` methods that get applied to a
+:class:`StringWithFormatting` need to be applied over the whole list of string
+components, which can complicate matters somewhat. For example,
+:meth:`str.stip` should only affect each end of a :class:`str`, so
+:class:`StringWithFormatting` has to be careful not to apply :meth:`str.strip`
+equally every single one of its components.
 
 String components
 -----------------
 
 The final class of object that completes the formatting puzzle is the
-:class:`StringComponentSpec`. Each :class:`StringComponentSpec` is a
+:class:`StringComponent`. Each :class:`StringComponent` is a
 specification of what each portion of a :class:`StringWithFormatting` is like.
-It contains some 'content' and refers to a :class:`Placholder` instance for
-instruction as to how that content should be formatted.
+It is a simple derivative of :class:`str` that also maintains a reference to a
+:class:`Placholder` instance for instruction as to how that content should be
+formatted. Values return from calling methods of :class:`str` are handled such
+that the :class:`StringComponent` object's placeholder is attached
+appropriately.  When populated (via :meth:`StringComponent.populate` in much
+the same vein as our other classes), a :class:`StringComponent` returns the
+string's contents prepended by the formatting escape sequences.
 
-When populated (via :meth:`StringComponentSpec.populate` in much the same vein
-as our other classes), a :class:`StringComponentSpec` returns not only the
-escape sequence of its placeholder, but its contents and an escape sequence to
-revert the application of its placeholder. Of note is the fact that
-:attr:`StringComponentSpec.content` can also be a 'populatable' thing, so
-:meth:`StringComponentSpec` will recursively populate it's contents. This means
-we need a stack (:class:`EscapeSequenceStack`) to keep track of what escapes
-sequences will have been applied in a string so that we can undo them neatly.
-
-:class:`StringComponentSpec` objects are created by the user when they call
+:class:`StringComponent` objects are created by the user when they call
 :class:`Placeholder` objects with some content. :class:`StringWithFormatting`
-objects are then created when :class:`StringComponentSpec` objects are added
+objects are then created when :class:`StringComponent` objects are added
 together. This makes a nice, seamless API where users don't have to keep track
-of all of our internal semantics, whilst giving us severl sensible levels of
+of all of our internal semantics, whilst giving us several useful levels of
 abstraction for dealing with the problem, which turns out to be quite
 complex(!), of how to draw escape sequences to the screen in a sensible order.
