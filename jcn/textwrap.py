@@ -88,6 +88,9 @@ class TextWrapper:
                 result.append(reduce(
                     lambda x, y: x + y, current_line[1:], current_line[0]))
             else:
+                # FIXME: should this line go? Removing it makes at least simple
+                # cases like wrap('    ', 10) actually behave like
+                # textwrap.wrap...
                 result.append('')
         return result
 
