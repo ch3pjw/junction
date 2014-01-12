@@ -156,7 +156,11 @@ class StylePlaceholder(Placeholder):
 
 
 class NullPlaceholder(Placeholder):
+    '''FIXME: reference :attr:`null_placeholder`
+    '''
     def __init__(self):
+        '''FIXME:
+        '''
         super().__init__('')
 
     def __repr__(self):
