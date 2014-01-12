@@ -111,6 +111,13 @@ class TestDisplayElements(TestCase):
         result = text.get_all_blocks(17, 4)[0].lines
         self.assertEqual(result, expected)
 
+    def test_text_with_no_wrap(self):
+        text = Text('some long\nstring')
+        text.wrap = False
+        result = text.get_all_blocks(7, 2)[0].lines
+        expected = ['some lo', 'string ']
+        self.assertEqual(result, expected)
+
     def test_label(self):
         label = Label('LHR')
         expected = ['LHR ', '    ']
