@@ -2,10 +2,13 @@ formatting.py
 =============
 
 .. automodule:: jcn.formatting
-    :members: Placeholder, FormatPlaceholder, ParameterizingFormatPlaceholder,
-        NullPlaceholder, StylePlaceholder, PlaceholderGroup,
-        FormatPlaceholderFactory, StylePlaceholderFactory, StringComponent,
-        StringWithFormatting
+    :members:
     :undoc-members:
     :special-members: __init__, __call__
     :show-inheritance:
+
+.. autoclass:: jcn.formatting.Placeholder
+   :members:
+   :undoc-members:
+   :special-members: __init__, __call__
+   :show-inheritance:

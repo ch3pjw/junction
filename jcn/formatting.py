@@ -20,6 +20,12 @@ from itertools import islice
 from .terminal import get_terminal
 from .util import InheritDocstrings
 
+__all__ = ['FormatPlaceholder', 'ParameterizingFormatPlaceholder',
+           'NullPlaceholder', 'null_placeholder', 'StylePlaceholder',
+           'PlaceholderGroup', 'FormatPlaceholderFactory',
+           'StylePlaceholderFactory', 'StringComponent',
+           'StringWithFormatting']
+
 
 class Placeholder(metaclass=InheritDocstrings):
     '''Placeholders are objects that will provide concrete terminal escape
