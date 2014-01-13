@@ -18,8 +18,7 @@ from collections import namedtuple
 
 from .terminal import get_terminal
 from .formatting import (
-    StringWithFormatting, EscapeSequenceStack, FormatPlaceholder,
-    PlaceholderGroup)
+    StringWithFormatting, FormatPlaceholder, PlaceholderGroup)
 
 
 Geometry = namedtuple(
@@ -156,29 +155,29 @@ class ABCUIElement(metaclass=ABCMeta):
     def _do_draw(self, blocks, terminal, styles):
         terminal = terminal or get_terminal()
         styles = styles or {}
-        esc_seq_stack = EscapeSequenceStack(terminal.normal)
-        terminal.stream.write(terminal.normal)
         for block in blocks:
             if block.default_format:
-                def_esq_seq = block.default_format.populate(terminal, styles)
-                terminal.stream.write(def_esq_seq)
-                esc_seq_stack.push(def_esq_seq)
+                default_esq_seq = (
+                    terminal.normal + block.default_format.populate(
+                        terminal, styles))
+            else:
+                default_esq_seq = terminal.normal
             lines = self._populate_lines(
-                block, terminal, styles, esc_seq_stack)
+                block, terminal, styles, default_esq_seq)
             terminal.draw_lines(lines, block.x, block.y)
-            if block.default_format:
-                terminal.stream.write(esc_seq_stack.pop())
         terminal.stream.flush()
 
-    def _populate_lines(self, block, terminal, styles, esc_seq_stack):
+    def _populate_lines(self, block, terminal, styles, default_esc_seq):
         '''Takes some lines to draw to the terminal, which may contain
         formatting placeholder objects, and inserts the appropriate concrete
         escapes sequences by using data from the terminal object and styles
         dictionary.
         '''
-        for i, line in enumerate(block):
-            if isinstance(line, StringWithFormatting):
-                line = line.populate(terminal, styles, esc_seq_stack)
+        for line in block:
+            if hasattr(line, 'populate'):
+                line = line.populate(terminal, styles, default_esc_seq)
+            else:
+                line = default_esc_seq + line
             yield line
 
     def get_all_blocks(

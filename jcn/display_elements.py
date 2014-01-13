@@ -78,6 +78,7 @@ class Text(ABCDisplayElement):
     def __init__(self, content='', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._content = content
+        self.wrap = True
 
     @property
     def content(self):
@@ -92,9 +93,12 @@ class Text(ABCDisplayElement):
 
     def _get_lines(self, width, height):
         unwrapped_lines = self.content.splitlines()
-        result = []
-        for line in unwrapped_lines:
-            result.extend(wrap(line, width))
+        if self.wrap:
+            result = []
+            for line in unwrapped_lines:
+                result.extend(wrap(line, width))
+        else:
+            result = unwrapped_lines
         return result
 
 

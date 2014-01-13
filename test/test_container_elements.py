@@ -90,9 +90,9 @@ class TestRoot(ContainerElementTestCase):
             loop.call_soon(loop.stop)
             root.run()
         self.assertIn(
-            self.terminal.move(0, 0) + '....' +
-            self.terminal.move(1, 0) + '....' +
-            self.terminal.move(2, 0) + '....',
+            self.terminal.move(0, 0) + self.terminal.normal + '....' +
+            self.terminal.move(1, 0) + self.terminal.normal + '....' +
+            self.terminal.move(2, 0) + self.terminal.normal + '....',
             self.terminal.stream.getvalue())
         fill2 = Fill()
         root.element = fill2

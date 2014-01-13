@@ -15,7 +15,9 @@
 
 from unittest import TestCase
 
-from jcn.formatting import FormatPlaceholderFactory, StringWithFormatting
+from jcn.formatting import (
+    FormatPlaceholderFactory, StringComponent, StringWithFormatting,
+    null_placeholder)
 from jcn.textwrap import wrap
 
 
@@ -39,10 +41,11 @@ class TestTextWrapper(TestCase):
             '  This  is a    rather ' + self.format.bold('loooong ') +
             'string th' + self.format.green('at needs wrapppppp') + 'ing ')
         result = wrap(long_swf, width=11)
+        # FIXME: this output might now be a bit too implementation specific!
         expected = [
-            StringWithFormatting('This  is a'),
-            StringWithFormatting('rather'),
-            StringWithFormatting(self.format.bold('loooong')),
+            StringComponent(null_placeholder, 'This  is a'),
+            StringComponent(null_placeholder, 'rather'),
+            self.format.bold('loooong'),
             'string th' + self.format.green('at'),
             StringWithFormatting(self.format.green('needs wrapp')),
             self.format.green('pppp') + 'ing']

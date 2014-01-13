@@ -16,7 +16,7 @@
 from textwrap import TextWrapper as _TextWrapper
 from functools import reduce
 
-from .formatting import StringComponentSpec, StringWithFormatting
+from .formatting import StringWithFormatting
 
 
 class TextWrapper:
@@ -32,11 +32,6 @@ class TextWrapper:
 
         if isinstance(string_like, StringWithFormatting):
             chunks = string_like.chunk(regex)
-        elif isinstance(string_like, StringComponentSpec):
-            # FIXME: it's a bit naff that content could end up being of this
-            # type...
-            chunks = string_like.chunk(regex)
-            chunks = [StringWithFormatting(c) for c in chunks]
         else:
             chunks = regex.split(string_like)
             chunks = [c for c in chunks if c]
@@ -93,6 +88,9 @@ class TextWrapper:
                 result.append(reduce(
                     lambda x, y: x + y, current_line[1:], current_line[0]))
             else:
+                # FIXME: should this line go? Removing it makes at least simple
+                # cases like wrap('    ', 10) actually behave like
+                # textwrap.wrap...
                 result.append('')
         return result
 
